@@ -1,0 +1,62 @@
+#!/usr/bin/python
+usage       = "simulateGraceDBEvent [--options] config.ini"
+description = "a script to submit a single fake trigger to an instance of GraceDB as well as simulated follow-up processes."
+author      = "reed.essick@ligo.org"
+
+#-------------------------------------------------
+
+import time
+import numpy as np
+
+from lal.gpstime import tconvert
+from ligo.gracedb.rest import GraceDb
+
+from ConfigParser import SafeConfigParser
+
+from optparse import OptionParser
+
+#-------------------------------------------------
+
+parser = OptionParser( usage=usage, description=description )
+
+### options about gracedb
+parser.add_option("-g", "--gracedb-url", default="https://gracedb.ligo.org/api/", type="string" )
+
+opts, args = parser.parse_args()
+
+if len(args)!=1:
+    raise ValueError("please supply exactly one eventConfig.ini file as an argument\n%s"%usage)
+
+### set up GraceDB
+print( "generating GraceDb instance pointing toward : %s"%opts.gracedb_url )
+gdb = GraceDb( opts.gracedb_url )
+
+#-------------------------------------------------
+
+### reading from config
+print( "reading options from : %s"%args[0] )
+config = SafeConfigParser
+config.read( args[0] )
+
+group    = "Test" ### this is HARD CODED so we don't mess anything up
+pipeline = config.get('general', 'pipeline')
+if config.has_option('general', 'search')
+    search = config.get('general', 'search')
+else:
+    search = None
+
+### set up schedule of crap to upload
+schedule = []
+
+#-------------------------------------------------
+
+print( "Submitting simulated event to GraceDB" )
+
+#-------------------------------------------------
+
+print( "posting follow-up messages and faked data" )
+for wait, message, filename, tagnames in schedule:
+    print( "    waiting %.3 sec"%wait )
+    time.sleep(wait)
+
+    print "do something here!"
