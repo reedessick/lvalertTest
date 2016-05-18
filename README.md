@@ -32,3 +32,11 @@ this appears to be working, at least in principle. We need to do the following, 
 We also need to come up with a way to specify which "type" of process this is so that we load the appropriate parseAlert function and associated libraries. This is more of an organizational detail than a serious technical impediment.
   -- current solution is an option in childConfig which will tell the script which library to source for parseAlert()
 
+--------------------------------------------------
+
+To Do:
+
+  -- set up poisson event generator
+    -- mimic each type of event (ie: pipeline)
+  -- set up dummy messages for expected follow-up processes
+  -- may want to submit events to an instance of simDB rather than just sending alerts?
