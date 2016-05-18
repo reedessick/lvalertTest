@@ -49,7 +49,7 @@ config.read( args[0] )
 
 group    = "Test" ### this is HARD CODED so we don't mess anything up
 pipeline = config.get('general', 'pipeline')
-if config.has_option('general', 'search')
+if config.has_option('general', 'search'):
     search = config.get('general', 'search')
 else:
     search = None
