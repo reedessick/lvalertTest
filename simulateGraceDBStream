@@ -8,7 +8,7 @@ author      = "reed.essick@ligo.org"
 import time
 import numpy as np
 
-import simulateGraceDBUtils as utils
+import simUtils as utils
 
 import subprocess as sp
 
@@ -95,14 +95,14 @@ if opts.verbose:
     print( "Submitting simulated events to GraceDB" )
 
 procs = []
-cmdStr = "simulateGraceDBEvent -g %(gracedb_url)s %(event_config)s"%(opts.__dict__)
-cmd = cmdStr.split()
 
 for ind, wait in enumerate(waits):
     if opts.verbose:
         print( "    waiting %.3f sec"%wait )
     time.sleep(wait)
 
+    cmdStr = "simulateGraceDBEvent -g %(gracedb_url)s %(event_config)s"%(opts.__dict__) + " -o %s/%d"%(opts.output_dir, ind)
+    cmd = cmdStr.split()
     out = "%s/event-%d.out"%(opts.output_dir, ind)
     err = out[:-3]+"err"
     if opts.verbose:

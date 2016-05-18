@@ -5,6 +5,8 @@ author      = "reed.essick@ligo.org"
 
 #-------------------------------------------------
 
+import os
+import json
 import time
 import numpy as np
 
@@ -19,13 +21,18 @@ from optparse import OptionParser
 
 parser = OptionParser( usage=usage, description=description )
 
-### options about gracedb
 parser.add_option("-g", "--gracedb-url", default="https://gracedb.ligo.org/api/", type="string" )
+
+parser.add_option("-o", "--output-dir", default=".", type="string")
 
 opts, args = parser.parse_args()
 
 if len(args)!=1:
     raise ValueError("please supply exactly one eventConfig.ini file as an argument\n%s"%usage)
+
+if not os.path.exists(opts.output_dir):
+    os.makedirs(opts.output_dir)
+os.chdir(opts.output_dir)
 
 ### set up GraceDB
 print( "generating GraceDb instance pointing toward : %s"%opts.gracedb_url )
@@ -38,6 +45,8 @@ print( "reading options from : %s"%args[0] )
 config = SafeConfigParser
 config.read( args[0] )
 
+#-------------------------------------------------
+
 group    = "Test" ### this is HARD CODED so we don't mess anything up
 pipeline = config.get('general', 'pipeline')
 if config.has_option('general', 'search')
@@ -45,18 +54,70 @@ if config.has_option('general', 'search')
 else:
     search = None
 
-### set up schedule of crap to upload
-schedule = []
+### set up initial data file
+gps = tconvert( 'now' )
+far = np.random.rand()
 
-#-------------------------------------------------
+raise NotImplementedError('write code to dummy up pipeline\'s initial data files')
+### will also need to dump the other metadata required by cbc searches (psd.xml.gz)
+creationSchedule = []
 
 print( "Submitting simulated event to GraceDB" )
+trgname = "fake.txt"
+response = json.loads(gdb.createEvent( group, pipeline, trgname, search=search ).read())
+graceid = response['graceid']
+for message, filename, tagnames in creationSchedule:
+    print( "        message=%"+message )
+    print( "        filename="+filename )
+    print( "        tagnames="+str(tagnames))
+
+    response = gdb.writeLog( graceid, message=message, filename=filename, tagname=tagnames )
 
 #-------------------------------------------------
 
-print( "posting follow-up messages and faked data" )
-for wait, message, filename, tagnames in schedule:
-    print( "    waiting %.3 sec"%wait )
-    time.sleep(wait)
+### set up schedule of crap to upload
+print( "setting up schedule of follow-up messages" )
+skymapOptions = {}
+if config.has_section('plot skymaps'):
+    skymapOptions.update( {'plot skymaps':dict(config.options('plot skymaps'))} )
+if config.has_section('skyviewer'):
+    skymapOptions.update( {'skyviewer':dict(config.options('skyviewer'))} )
 
-    print "do something here!"
+schedule = []
+if config.has_section('external triggers'):
+    schedule += utils.externalTriggers( gps, graceid, dict(config.options('external triggers')) )
+
+if config.has_section('unblind injections'):
+    schedule += utils.unblindInjections( gps, graceid, dict(config.options('unblind injections')) )
+
+if config.has_section('idq'):
+    schedule += utils.idq( gps, graceid, dict(config.options('idq')) )
+
+if config.has_section('segDB2grcDB'):
+    schedule += utils.segDB2grcDB( gps, graceid, dict(config.options('segDB2grcDB')) )
+
+if config.has_section('bayestar'):
+    schedule += utils.bayestar( gps, graceid, dict(config.options('bayestar')), skymapOptions=skymapOptions )
+
+if config.has_section('lalinf'):
+    schedule += utils.lalinf( gps, graceid, dict(config.options('lalinf')), skymapOptions=skymapOptions )
+
+if config.has_section('lib'):
+    schedule += utils.lib( gps, graceid, dict(config.options('lib')), skymapOptions=skymapOptions )
+
+if config.has_section('bayeswave'):
+    schedule += utils.bayeswave( gps, graceid, dict(config.options('bayeswave')), skymapOptions=skymapOptions )
+
+print( "posting follow-up messages and faked data" )
+t0 = time.time()
+for upload_gps, message, filename, tagnames in schedule:
+    wait = (upload_gps - gps) - (t - t0)
+    if wait > 0:
+        print( "    waiting %.3 sec"%wait )
+        time.sleep(wait)
+
+    print( "        message=%"+message )
+    print( "        filename="+filename )
+    print( "        tagnames="+str(tagnames))
+
+    response = gdb.writeLog( graceid, message=message, filename=filename, tagname=tagnames )
