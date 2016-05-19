@@ -58,16 +58,15 @@ else:
 gps = tconvert( 'now' )
 far = np.random.rand()
 
-raise NotImplementedError('write code to dummy up pipeline\'s initial data files')
-### will also need to dump the other metadata required by cbc searches (psd.xml.gz)
-creationSchedule = []
+filename, creationSchedule = utils.eventCration( gps, far, pipeline )
 
 print( "Submitting simulated event to GraceDB" )
 trgname = "fake.txt"
-response = json.loads(gdb.createEvent( group, pipeline, trgname, search=search ).read())
+response = json.loads(gdb.createEvent( group, pipeline, filename, search=search ).read())
 graceid = response['graceid']
+print( "    GraceID="+graceid )
 for message, filename, tagnames in creationSchedule:
-    print( "        message=%"+message )
+    print( "        message ="+message )
     print( "        filename="+filename )
     print( "        tagnames="+str(tagnames))
 
