@@ -12,17 +12,17 @@ class GraceDBEvent(object):
     a wrapper around a single attribute (graceid) so that different actions can reference the same event without know what the graceid is a priori
     '''
     def __init__(self, graceid=None):
-        self.graceid = None
+        self.__graceid__ = None
 
     def get_graceid(self):
-        if self.graceid!=None:
-            return self.graceid
+        if self.__graceid__!=None:
+            return self.__graceid__
         else:
             raise RuntimeError('graceid has not been set for this GraceDBEvent yet!')
 
     def set_graceid(self, graceid):
-        if self.graceid==None:
-            self.graceid = graceid
+        if self.__graceid__==None:
+            self.__graceid__ = graceid
         else:
             raise RuntimeError('graceid has already been set for this GraceDBEvent!')
 
