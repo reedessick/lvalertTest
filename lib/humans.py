@@ -46,7 +46,7 @@ class HumanSignoff(object):
 
     def genSchedule(self, request=True, respond=True):
         '''
-        generate a schedule for this activity
+        generate a schedule for this human signoff
         '''
         sched = schedule.Schedule()
         if request:
