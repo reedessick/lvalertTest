@@ -15,22 +15,37 @@ generate a different object for each follow-up. These may inherit from a single 
 
 class Bayestar():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 class LALInference():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 class LIB():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 class BayesWave():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 class CoherentWaveBurst():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 '''

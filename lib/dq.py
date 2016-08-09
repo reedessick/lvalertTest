@@ -14,11 +14,17 @@ generate a different object for each follow-up. These may inherit from a single 
 '''
 
 class IDQ():
-    def __init__(self):
+    def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 class segDB2grcDB():
-    def __init__(self):
+    def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
         raise NotImplementedError
 
 '''
