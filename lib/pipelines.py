@@ -3,7 +3,10 @@ author = "reed.essick@ligo.org"
 
 #-------------------------------------------------
 
+import os
 import json
+
+import random
 
 import schedule
 
@@ -11,6 +14,8 @@ from glue.ligolw import ligolw
 from glue.ligolw import utils as ligolw_utils
 from glue.ligolw import lsctables
 from glue.ligolw import table
+
+import types
 
 #-------------------------------------------------
 
@@ -34,10 +39,12 @@ class Pipeline(object):
         self.gdb_url      = gdb_url
 
         if self.allowed_groups: ### if specified, check
-            assert group in self.allowed_groups, 'group=%s not allowed for pipeline=%s'%(group, self.pipeline)
+            assert group.lower() in self.allowed_groups, 'group=%s not allowed for pipeline=%s'%(group, self.pipeline)
         self.group  = group
         if self.allowed_searches: ### if specified, check
-            assert search in self.allowed_searches, 'search=%s not allowed for pipeline=%s'%(search, self.pipline)
+            if search:
+                search = search.lower()
+            assert search.lower() in self.allowed_searches, 'search=%s not allowed for pipeline=%s'%(search, self.pipline)
         self.search = search
 
         self.gps = gps
@@ -55,7 +62,7 @@ class Pipeline(object):
         return snrs
 
     def genFilename(self, directory=".", suffix='json'):
-        return os.path.join(directory, self.pipeline+"_"+"".join(random.choose(letters) for _ in xrange(6))+"."+suffix)
+        return os.path.join(directory, self.pipeline+"_"+"".join(random.choice(letters) for _ in xrange(6))+"."+suffix)
 
     def genFiles(self, directory='.'):
         '''
@@ -64,12 +71,12 @@ class Pipeline(object):
         '''
         raise NotImplementedError("this is just a parent class. Children should overwrite this method and they're the ones that should actually be used")
 
-    def genSchedule(self):
+    def genSchedule(self, directory='.'):
         '''
         generate schedule for event creation
         '''
         sched = schedule.Schedule()
-        firstFile, otherFiles = self.genFiles() ### generate files
+        firstFile, otherFiles = self.genFiles(directory=directory) ### generate files
         sched.insert( schedule.CreateEvent( 0.0, self.graceDBevent, self.group, self.pipeline, firstFile, search=self.search, gdb_url=self.gdb_url ) )
         for dt, message, filename in otherFiles: ### schedule any ancilliary file uploads
             sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, filename=filename, gdb_url=self.gdb_url ) ) 
@@ -129,7 +136,7 @@ class OmicronLIB(Pipeline):
                 'BCI'           : self.drawBCI(),
                 'BSN'           : self.drawBSN(),
                 'instruments'   : ','.join(self.instruments),
-                'timeslides'    : {(key,'0.0') for key in self.instruments},
+                'timeslides'    : dict( (key,'0.0') for key in self.instruments ),
                 'Omicron SNR'   : self.drawSNRs(),
                 'hrss'          : self.drawHrss(),
                 'frequency'     : self.drawFrequency(),
@@ -303,7 +310,7 @@ class CBCPipeline(Pipeline):
     allowed_groups   = ['gropu', 'test']
 
     def genFilename(self, directory="."):
-        randStr = "".join(random.choose(letters) for _ in xrange(6))
+        randStr = "".join(random.choice(letters) for _ in xrange(6))
         coinc   = os.path.join(directory, self.pipeline+"_coinc_"+randStr+".xml")
         psd     = os.path.join(directory, self.pipeline+"_psd_"+randStr+".xml")
         return coinc, psd
@@ -556,3 +563,16 @@ This XML file does not appear to have any style information associated with it. 
 </LIGO_LW>
 </LIGO_LW>
 '''
+
+#-------------------------------------------------
+
+known_pipelines = dict( (x.pipeline, x) for x in vars().values() if isinstance(x, type) and issubclass(x, Pipeline) )
+
+def initPipeline(gps, far, instruments, group, pipeline, graceDBevent, search=None, gdb_url='https://gracedb.ligo.org/api/'):
+    '''
+    looks up the correct object and instantiates it
+    '''
+    if known_pipelines.has_key(pipeline):
+        return known_pipelines[pipeline](gps, far, instruments, group, graceDBevent, search=search, gdb_url=gdb_url)
+    else:
+        raise KeyError('could not find a Pipeline object with pipeline=%s'%pipeline)

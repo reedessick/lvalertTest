@@ -14,14 +14,17 @@ class GraceDBEvent(object):
     def __init__(self, graceid=None):
         self.__graceid__ = None
 
-    def get_graceid(self):
-        if self.__graceid__!=None:
+    def __str__(self):
+        return "graceid : "+str(self.__graceid__)
+
+    def get_graceid(self, force=False):
+        if force or (self.__graceid__!=None):
             return self.__graceid__
         else:
             raise RuntimeError('graceid has not been set for this GraceDBEvent yet!')
 
-    def set_graceid(self, graceid):
-        if self.__graceid__==None:
+    def set_graceid(self, graceid, force=False):
+        if force or (self.__graceid__==None):
             self.__graceid__ = graceid
         else:
             raise RuntimeError('graceid has already been set for this GraceDBEvent!')
@@ -40,15 +43,25 @@ class Action(object):
 
         self.expiration = None
 
+    def __str__(self):
+        return """Action
+    timeout : %.3f
+    expiration : %.3f"""%(self.dt, self.expiration)
+
     def setExpiration(self, t0):
         self.expiration = t0+self.dt
 
     def hasExpired(self):
         return time.time() > self.expiration
 
-    def wait(self):
+    def wait(self, verbose=False):
         if not self.hasExpired():
-            time.sleep(time.time()-self.expiration)
+            wait = self.expiration - time.time()
+        else:
+            wait = 0.0
+        if verbose:
+            print "sleeping for %.3f sec"%wait
+        time.sleep( wait )
 
     def execute(self):
         self.foo( *self.args, **self.kwargs )
@@ -59,6 +72,9 @@ class Schedule(object):
     '''
     def __init__(self):
         self.actions = []
+
+    def __iter__(self):
+        return self.actions.__iter__()
 
     def insert(self, newActions):
         if not hasattr( newActions, "__iter__"):
@@ -78,10 +94,10 @@ class Schedule(object):
             ind += 1
         else:
             while len(newActions):
-                self.actions.append( newAction )
+                self.actions.append( newActions.pop(0) )
 
     def pop(self, ind=0):
-        return actions.pop(ind)
+        return self.actions.pop(ind)
 
     def __len__(self):
         return len(self.actions)
@@ -99,6 +115,10 @@ class Schedule(object):
         for action in self.actions:
             action.expiration += delay
 
+    def setExpiration(self, t0):
+        for action in self.actions:
+            action.setExpiration( t0 )
+
 #-------------------------------------------------
 
 class CreateEvent(Action):
@@ -112,8 +132,18 @@ class CreateEvent(Action):
         self.filename = filename
         self.group    = group
         self.pipeline = pipeline
+        self.search   = search
 
-        super(Label, self).__init__(dt, self.createEvent)
+        super(CreateEvent, self).__init__(dt, self.createEvent)
+
+    def __str__(self):
+        return """CreateEvent -> %s
+    group      : %s
+    pipeline   : %s
+    search     : %s
+    filename   : %s
+    timeout    : %.3f
+    expiration : %.3f"""%(self.gdb_url, self.group, self.pipeline, self.search, self.filename, self.dt, self.expiration)
 
     def createEvent(self, *args, **kwargs):
         '''
@@ -128,12 +158,19 @@ class WriteLabel(Action):
     apply a label
     '''
     def __init__(self, dt, graceDBevent, label, gdb_url='https://gracedb.ligo.org/api'):
-        self.graceDBentry = graceDBevent
+        self.graceDBevent = graceDBevent
         self.gdb_url = gdb_url
 
         self.label = label
 
-        super(Label, self).__init__(dt, self.writeLabel)
+        super(WriteLabel, self).__init__(dt, self.writeLabel)
+
+    def __str__(self):
+        return """WriteLabel -> %s
+    graceid    : %s
+    label      : %s
+    timeout    : %.3f
+    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, self.expiration)
 
     def writeLabel(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
@@ -151,7 +188,16 @@ class WriteLog(Action):
         self.filename = filename
         self.tagname = tagname
       
-        super(Log, self).__init__(dt, writeLog)
+        super(WriteLog, self).__init__(dt, writeLog)
+
+    def __str__(self):
+        return """WriteLog -> %s
+    graceid    : %s
+    message    : %s
+    filename   : %s
+    tagname    : %s
+    timeout    : %.3f
+    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.message, self.filename, self.tagname, self.dt, self.expiration)
 
     def writeLog(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
