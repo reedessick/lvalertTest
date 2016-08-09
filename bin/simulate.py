@@ -19,6 +19,8 @@ from lal.gpstime import tconvert
 
 from ConfigParser import SafeConfigParser
 
+import traceback
+
 from optparse import OptionParser
 
 #-------------------------------------------------
@@ -30,7 +32,9 @@ parser.add_option("-V", "--Verbose", default=False, action="store_true")
 
 ### testing options
 parser.add_option("-s", "--unsafe-uploads", default=False, action="store_true", help="allow event creation with group!=Test")
-parser.add_option("-t", "--test", default=False, action="store_true", help="do not actually perform actions, but only print what they are")
+parser.add_option("-T", "--test", default=False, action="store_true", help="do not actually perform actions, but only print what they are")
+
+parser.add_option("-p", "--pause", default=5, type="float", help="the amount of time waited between constructing schedule and beginning it's exectution")
 
 ### options about gracedb
 parser.add_option("-g", "--gracedb-url", default="https://gracedb.ligo.org/api/", type="string" )
@@ -126,6 +130,7 @@ if not len(waits):
         print "No times found!"
     import sys
     sys.exit(0)
+waits[0] = 0 ### reset the first entry to be occur immediately
 
 #-------------------------------------------------
 
@@ -152,7 +157,7 @@ for ind, wait in enumerate(waits):
     config = random.choice( configs )
 
     ### generate agenda
-    agenda = utils.genSchedule( gps, far, instruments, config, safe=safe, gdb_url=opts.gracedb_url )
+    agenda = utils.genSchedule( gps, far, instruments, config, safe=safe, gdb_url=opts.gracedb_url, directory=opts.output_dir )
     agenda.setExpiration( t0+delay ) ### delay this by the associated wait time
     if opts.Verbose:
         for action in agenda:
@@ -164,10 +169,10 @@ for ind, wait in enumerate(waits):
 #-------------------------------------------------
 
 ### actually perform the actions
-sched.bump( 10 ) ### bump everything by 10 seconds 
+sched.bump( opts.pause ) ### bump everything by 10 seconds 
 if opts.verbose:
-    print "waiting ~10 seconds to ensure everything is sequenced correctly"
-time.sleep( 10 )
+    print "waiting ~%.3f seconds to ensure everything is sequenced correctly"%opts.pause
+time.sleep( opts.pause )
 
 if opts.verbose:
     print "iterating through schedule"
@@ -178,4 +183,9 @@ for action in sched: ### iterate through actions in schedule
         print "  ", action
 
     if execute:
-        action.execute() ### actually perform the action
+        try:
+            action.execute() ### actually perform the action
+        except Exception:
+            print traceback.print_exc()
+            if raw_input("continue? (yes/no) : ")!="yes":
+                raise KeyboardInterrupt 

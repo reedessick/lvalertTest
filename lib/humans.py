@@ -17,16 +17,19 @@ class HumanSignoff(object):
     '''
     name = 'human'
 
-    def __init__(self, graceDBevent, respondTimeout=60.0, respondJitter=10.0, respondProbOfSuccess=1.0, requestTimeout=0.0, requestJitter=0.0):
+    def __init__(self, graceDBevent, respondTimeout=60.0, respondJitter=10.0, respondProb=1.0, respondProbOfSuccess=1.0, requestTimeout=0.0, requestJitter=0.0, gdb_url='https://gracedb.ligo.org/api/'):
         self.graceDBevent = graceDBevent ### pointer to shared object that will contain graceid assigned to this event
+        self.gdb_url = gdb_url
 
-        self.respondTimeout = respondTimeout ### mean amount of time we wait
-        self.respondJitter  = respondJitter  ### the stdv of the jitter aound self.timeout
-        self.respondProb    = respondProbOfSuccess ### probability of human returning OK
-
-        ### repeate for request
+        ### request options
         self.requestTimeout = requestTimeout
         self.requestJitter  = requestJitter
+
+        ### response options
+        self.respondTimeout = respondTimeout ### mean amount of time we wait
+        self.respondJitter  = respondJitter  ### the stdv of the jitter aound self.timeout
+        self.respondProb    = respondProb ### probability of actually responding
+        self.respondSuccess = respondProbOfSuccess ### probablity of returning OK
 
     def request(self):
         '''
@@ -50,13 +53,15 @@ class HumanSignoff(object):
         sched = schedule.Schedule()
         if request:
             request_dt = max(0, random.normalvariate(self.requestTimeout, self.requestJitter) )
-            request = schedule.WriteLabel( request_dt, self.graceDBevent, self.request() )
+            request = schedule.WriteLabel( request_dt, self.graceDBevent, self.request(), gdb_url=self.gdb_url )
             sched.insert( request )
-        if respond:
+        if respond and (random.random() < self.respondProbOfSuccess):
             respond_dt = max(0, random.normalvariate(self.respondTimeout, self.respondJitter))
             if request:
                 respond_dt = max(request_dt, respond_dt)
-            respond = schedule.WriteLabel( respond_dt, self.graceDBevent, self.decide() )
+                remove = schedule.RemoveLabel( respond_dt, self.graceDBevent, self.request(), gdb_url=self.gdb_url )
+                sched.insert( remove )
+            respond = schedule.WriteLabel( respond_dt, self.graceDBevent, self.decide(), gdb_url=self.gdb_url )
             sched.insert( respond )
         return sched
 
@@ -70,10 +75,18 @@ class Site(HumanSignoff):
     '''
     knownSites = ['H1', 'L1']
 
-    def __init__(self, siteName, graceDBevent, respondTimeout=60.0, respondJitter=10.0, respondProbOfSuccess=1.0, requestTimeout=0.0, requestJitter=0.0):
+    def __init__(self, siteName, graceDBevent, respondTimeout=60.0, respondJitter=10.0, respondProb=1.0, respondProbOfSuccess=1.0, requestTimeout=0.0, requestJitter=0.0, gdb_url='https://gracedb.ligo.org/api/'):
         assert siteName in self.knownSites, 'siteName=%s is not in the list of known sites'%siteName ### ensure we know about this site
         self.name = siteName
-        super(Site, self).__init__(graceDBevent, respondTimeout=respondTimeout, respondJitter=respondJitter, respondProbOfSuccess=respondProbOfSuccess, requestTimeout=requestTimeout, requestJitter=requestTimeout)
+        super(Site, self).__init__(graceDBevent, 
+                                   gdb_url=gdb_url,
+                                   requestTimeout=requestTimeout, 
+                                   requestJitter=requestTimeout, 
+                                   respondTimeout=respondTimeout, 
+                                   respondJitter=respondJitter, 
+                                   respondProb=respondProb, 
+                                   respondProbOfSuccess=respondProbOfSuccess, 
+                                  )
 
     def request(self):
         return "%sOPS"%self.name

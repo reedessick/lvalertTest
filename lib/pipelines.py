@@ -39,12 +39,10 @@ class Pipeline(object):
         self.gdb_url      = gdb_url
 
         if self.allowed_groups: ### if specified, check
-            assert group.lower() in self.allowed_groups, 'group=%s not allowed for pipeline=%s'%(group, self.pipeline)
+            assert group in self.allowed_groups, 'group=%s not allowed for pipeline=%s'%(group, self.pipeline)
         self.group  = group
         if self.allowed_searches: ### if specified, check
-            if search:
-                search = search.lower()
-            assert search.lower() in self.allowed_searches, 'search=%s not allowed for pipeline=%s'%(search, self.pipline)
+            assert search in self.allowed_searches, 'search=%s not allowed for pipeline=%s'%(search, self.pipeline)
         self.search = search
 
         self.gps = gps
@@ -93,9 +91,9 @@ class OmicronLIB(Pipeline):
     '''
     a Pipeline for oLIB
     '''
-    pipeline = 'lib'
-    allowed_groups   = ['burst', 'test']
-    allowed_searches = ['allsky', None]
+    pipeline = 'LIB'
+    allowed_groups   = ['Burst', 'Test']
+    allowed_searches = ['AllSky', None]
 
     def drawBCI(self):
         return max(random.normalvariate( 10, 3 ), 0)
@@ -154,12 +152,15 @@ class CoherentWaveBurst(Pipeline):
     '''
     a Pipeline for cWB
     '''
-    pipeline         = 'cwb'
-    allowed_groups   = ['burst', 'test']
-    allowed_searches = ['allsky', None]
+    pipeline         = 'CWB'
+    allowed_groups   = ['Burst', 'Test']
+    allowed_searches = ['AllSky', None]
 
     def drawRho(self):
         return max(random.normalvariate( 8, 1 ), 4)
+
+    def drawStart(self):
+        return min(random.normalvariate( -0.005, 0.001 ), 0) + self.gps
 
     def drawDuration(self):
         return max(random.normalvariate( 0.010, 0.001 ), 0.001)
@@ -191,6 +192,7 @@ class CoherentWaveBurst(Pipeline):
         d = [('rho'        , self.drawRho()),                                    ### shows up as "amplitude" on GraceDb
              ('likelihood' , snrs['Network']**2),                                ### used for "snr" on GraceDB
              ('ifo'        , " ".join(self.instruments)),
+             ('start'      , "%.9f"%self.drawStart()),
              ('time'       , " ".join(str(self.gps) for _ in self.instruments)),
              ('duration'   , "%.9f"%self.drawDuration()),                               ### first entry shows up as duration
              ('phi'        , "0.000000 0.000000 %.6f"%self.drawRA()),            ### third entry shows up as ligo_axis_ra
@@ -206,7 +208,7 @@ class CoherentWaveBurst(Pipeline):
         print >> file_obj, "search=r"
         print >> file_obj, "## number of events with rho>= rho of the event | corresponding rate | start time of the analyzed segment list | end time of the analyzed segment list | duration of the analyzed segment list"
         seglen = 86400
-        print >> file_obj, "#significance based on the last day\n%d %(far).9f %d %d %d"%(int(self.far*seglen), self.far, self.gps-0.5*seglen, self.gps+0.5*seglen, seglen)
+        print >> file_obj, "#significance based on the last day\n%d %.9f %d %d %d"%(int(self.far*seglen), self.far, self.gps-0.5*seglen, self.gps+0.5*seglen, seglen)
         print >> file_obj, filename
         file_obj.close()
 
@@ -307,7 +309,7 @@ class CBCPipeline(Pipeline):
     a Pipeline for CBC events
     '''
     pipeline = 'cbcPipeline'
-    allowed_groups   = ['gropu', 'test']
+    allowed_groups   = ['CBC', 'Test']
 
     def genFilename(self, directory="."):
         randStr = "".join(random.choice(letters) for _ in xrange(6))
@@ -333,28 +335,28 @@ class GSTLAL(CBCPipeline):
     a Pipeline for GSTLAL
     '''
     pipeline = 'gstlal'
-    allowed_searches = ['lowmass', 'highmass', None]
+    allowed_searches = ['LowMass', 'HighMass', None]
 
 class GSTLALSpiir(CBCPipeline):
     '''
     a Pipeline for GSTLAL-Spirr
     '''
     pipeline = 'gstlal-spiir'
-    allowed_searches = ['lowmass', 'highmass', None]
+    allowed_searches = ['LowMass', 'HighMass', None]
 
 class MBTAOnline(CBCPipeline):
     '''
     a Pipeline for MBTA
     '''
     pipeline = 'mbtaonline'
-    allowed_searches = ['lowmass', 'highmass', None]
+    allowed_searches = ['LowMass', 'HighMass', None]
 
 class PYCBC(CBCPipeline):
     '''
     a Pipeline for pycbc
     '''
     pipeline = 'pycbc'
-    allowed_searches = ['allsky', None]
+    allowed_searches = ['AllSky', None]
 
 '''
 This XML file does not appear to have any style information associated with it. The document tree is shown below.

@@ -35,13 +35,6 @@ def poisson_dt( rate ):
     return - np.log(1.0 - np.random.rand()) / rate
 
 #-------------------------------------------------
-# general utils
-#-------------------------------------------------
-
-def touch( filename ):
-    open(filename, 'w').close()
-
-#-------------------------------------------------
 # generate a schedule for a single event
 #-------------------------------------------------
 
@@ -64,7 +57,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
         search = None
 
     pipeObj = pipelines.initPipeline(gps, far, instruments, group, pipeline, graceDBevent, search=search, gdb_url=gdb_url)
-    sched += pipeObj.genSchedule()
+    sched += pipeObj.genSchedule(directory=directory)
 
     ### add schedule for human interactions
     if config.has_section('humans'):
@@ -74,33 +67,39 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
             requestDelay   = config.getfloat('humans', 'request delay')
             requestJitter  = config.getfloat('humans', 'request jitter')
 
-            site_respondDelay   = config.getfloat('humans', 'site respond delay')
-            site_respondJitter  = config.getfloat('humans', 'site respond jitter')
-            site_respondProb    = config.getfloat('humans', 'site respond prob')
+            site_respondDelay  = config.getfloat('humans', 'site respond delay')
+            site_respondJitter = config.getfloat('humans', 'site respond jitter')
+            site_respondProb   = config.getfloat('humans', 'site respond prob')
+            site_successProb   = config.getfloat('humans', 'site success prob')
 
-            adv_respondDelay   = config.getfloat('humans', 'adv respond delay')
-            adv_respondJitter  = config.getfloat('humans', 'adv respond jitter')
-            adv_respondProb    = config.getfloat('humans', 'adv respond prob')
+            adv_respondDelay  = config.getfloat('humans', 'adv respond delay')
+            adv_respondJitter = config.getfloat('humans', 'adv respond jitter')
+            adv_respondProb   = config.getfloat('humans', 'adv respond prob')
+            adv_successProb   = config.getfloat('humans', 'adv success prob')
 
             ### request signoff from each participating site
             for ifo in instruments:
                 site = humans.Site( ifo, 
                                     graceDBevent, 
+                                    gdb_url              = gdb_url,
                                     requestTimeout       = requestDelay, 
                                     requestJitter        = requestJitter, 
                                     respondTimeout       = site_respondDelay, 
                                     respondJitter        = site_respondJitter, 
-                                    respondProbOfSuccess = site_respondProb 
+                                    respondProb          = site_respondProb
+                                    respondProbOfSuccess = site_successProb, 
                                   )
                 sched += site.genSchedule(request=request, respond=respond)
 
             ### EM Advocate responses
             adv = humans.Adv( graceDBevent, 
+                              gdb_url              = gdb_url,
                               requestTimeout       = requestDelay,
                               requestJitter        = requestJitter,
                               respondTimeout       = adv_respondDelay,
                               respondJitter        = adv_respondJitter,
-                              respondProbOfSuccess = adv_respondProb
+                              respondProb          = adv_respondProb,
+                              respondProbOfSuccess = adv_successProb,
                             )
             sched += adv.genSchedule(request=request, respond=respond)
 
@@ -137,11 +136,35 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
     ### add schedule for misc stuff
     # external triggers
     if config.has_section('external triggers'):
-        raise NotImplementedError()
+        timeout = config.getfloat('external triggers', 'delay')
+        jitter  = config.getfloat('external triggers', 'jitter')
+        respondProb = config.getfloat('external triggers', 'respond prob')
+        successProb = config.getfloat('external triggers', 'success prob')
+
+        exTrg = misc.ExternalTriggers( graceDBevent, 
+                                       gdb_url       = gdb_url,
+                                       timeout       = delay, 
+                                       jitter        = jitter, 
+                                       probOfReport  = respondProb, 
+                                       probOfSuccess = successProb, 
+                                     )
+        sched += exTrg.genSchedule()
 
     # unblind injections
     if config.has_section('unblind injections'):
-        raise NotImplementedError()
+        timeout = config.getfloat('unblind injections', 'delay')
+        jitter  = config.getfloat('unblind injections', 'jitter')
+        respondProb = config.getfloat('unblind injections', 'respond prob')
+        successProb = config.getfloat('unblind injections', 'success prob')
 
-    ### return the schedule
+        unBld = misc.UnblindInjections( graceDBevent,
+                                        gdb_url       = gdb_url,
+                                        timeout       = delay,
+                                        jitter        = jitter,
+                                        probOfReport  = respondProb,
+                                        probOfSuccess = successProb,
+                                      ) 
+        sched += unBld.genSchedule()
+
+    ### we're done, so return the total schedule
     return sched

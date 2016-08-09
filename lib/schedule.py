@@ -5,6 +5,10 @@ author = "reed.essick@ligo.org"
 
 import time
 
+import json
+
+from ligo.gracedb.rest import GraceDb
+
 #-------------------------------------------------
 
 class GraceDBEvent(object):
@@ -126,7 +130,7 @@ class CreateEvent(Action):
     create an event
     '''
     def __init__(self, dt, graceDBevent, group, pipeline, filename, search=None, gdb_url='https://gracedb.ligo.org/api'):
-        self.graceDBentry = graceDBevent
+        self.graceDBevent = graceDBevent
         self.gdb_url = gdb_url
 
         self.filename = filename
@@ -150,8 +154,12 @@ class CreateEvent(Action):
         creates the entry in the database and updates self.graceDBevent.graceid so that other Actions know which graceid was assigned
         '''
         gdb = GraceDb(self.gdb_url)
-        http_response = gdb.createEvent( self.group, self.pipeline, self.filename, search=self.search )
-        self.graceDBevent.set_graceid( json.loads( http_response.read() )['graceid'] ) 
+        httpResponse = gdb.createEvent( self.group, self.pipeline, self.filename, search=self.search )
+        httpString = httpResponse.read()
+
+        print httpString
+
+        self.graceDBevent.set_graceid( json.loads( httpString )['graceid'] ) 
 
 class WriteLabel(Action):
     '''
@@ -174,7 +182,34 @@ class WriteLabel(Action):
 
     def writeLabel(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
-        gdb.writeLabel( self.graceDBevent.get_graceid(), self.label )
+        httpResponse = gdb.writeLabel( self.graceDBevent.get_graceid(), self.label )
+
+        print httpResponse.read()
+
+class RemoveLabel(Action):
+    '''
+    remove a label
+    '''
+    def __init__(self, dt, graceDBevent, label, gdb_url='https://gracedb.ligo.org/api'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url = gdb_url
+
+        self.label = label
+
+        super(RemoveLabel, self).__init__(dt, self.removeLabel)
+
+    def __str__(self):
+        return """RemoveLabel -> %s
+    graceid    : %s
+    label      : %s
+    timeout    : %.3f
+    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, self.expiration)
+
+    def removeLabel(self, *args, **kwargs):
+        gdb = GraceDb(self.gdb_url)
+        httpResponse = gdb.removeLabel( self.graceDBevent.get_graceid(), self.label )
+
+        print httpResponse.read()
 
 class WriteLog(Action):
     '''
@@ -201,4 +236,6 @@ class WriteLog(Action):
 
     def writeLog(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
-        gdb.writeLog( self.graceDBevent.get_graceid(), self.message, filename=self.filename, tagname=self.tagname )
+        httpResponse = gdb.writeLog( self.graceDBevent.get_graceid(), self.message, filename=self.filename, tagname=self.tagname )
+
+        print httpResponse.read()
