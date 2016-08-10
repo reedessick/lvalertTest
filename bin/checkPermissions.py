@@ -39,7 +39,7 @@ combos = {
           'Burst' : { 
                      'CWB'          : [None, 'AllSky'],
                      'LIB'          : [None, 'AllSky'],
-                    }
+                    },
           'Test'  : { 
                      'MBTAOnline'   : [None, 'LowMass', 'HighMass', 'MDC'], 
                      'gstlal'       : [None, 'LowMass', 'HighMass', 'MDC'], 
