@@ -116,6 +116,8 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
     # bayestar
     if config.has_section('bayestar'):
         raise NotImplementedError()
+        ### look for a WriteLog action in sched with os.path.basename(filename)=="psd.xml.gz"
+        ### bump all bayestar actions so they start after that has been uploaded
 
     # lalinference
     if config.has_section('lalinference'):

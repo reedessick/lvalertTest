@@ -4,6 +4,7 @@ author = "reed.essick@ligo.org"
 #-------------------------------------------------
 
 import os
+import shutil
 import json
 
 import random
@@ -214,93 +215,6 @@ class CoherentWaveBurst(Pipeline):
 
         return filename, []
 
-'''
-nevent:     1
-ndim:       2
-run:        1
-name:
-rho:        6.135850
-netCC:      0.789861
-netED:      0.013624
-penalty:    0.644564
-gnet:       0.713356
-anet:       0.420364
-inet:       1.918868
-likelihood: 1.078950e+02
-ecor:       5.091192e+01
-ECOR:       5.091192e+01
-factor:     0.000000
-range:      0.000000
-mchirp:     0.000000
-norm:       0.709433
-usize:      0
-ifo:        L1 H1
-eventID:    1 0
-rho:        6.135850 6.388615
-type:       1 0
-rate:       0 0
-volume:     19 19
-size:       5 12
-lag:        0.000000 0.000000
-slag:       0.000000 0.000000
-phi:        86.132812 0.000000 331.512665 188.789062
-theta:      124.228867 0.000000 -34.228867 107.582779
-psi:        -41.259022 0.000000
-iota:       33.768776 0.000000
-bp:          0.7775 -0.7217
-inj_bp:      0.0000  0.0000
-bx:          0.6239 -0.5740
-inj_bx:      0.0000  0.0000
-chirp:      0.000000 0.000022 0.013721 0.994642 0.800000 0.627830
-range:      0.000000 0.000000
-Deff:       0.000000 0.000000
-mass:       0.000000 0.000000
-spin:       0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
-eBBH:       0.000000 0.000000 0.000000
-null:       5.746222e-01 8.710215e-01
-strain:     2.197399e-22 0.000000e+00
-hrss:       1.525938e-22 1.581162e-22
-inj_hrss:   0.000000e+00 0.000000e+00
-noise:      1.948514e-23 2.317232e-23
-segment:    1137313332.0000 1137313528.0000 1137313332.0000 1137313528.0000
-start:      1137313504.6875 1137313504.6875
-time:       %(gps).4f %(gps).4f
-stop:       1137313504.9531 1137313504.9531
-inj_time:         0.0000       0.0000
-left:       172.687500 172.687500
-right:      23.046875 23.046875
-duration:   0.040769 0.265625
-frequency:  1778.375732 1776.344116
-low:        1696.000000
-high:       1840.000000
-bandwidth:  25.198294 144.000000
-snr:        6.258973e+01 4.643370e+01
-xSNR:       6.192430e+01 4.653129e+01
-sSNR:       6.126594e+01 4.662908e+01
-iSNR:       0.000000 0.000000
-oSNR:       0.000000 0.000000
-ioSNR:      0.000000 0.000000
-netcc:      0.789861 0.805347 0.720986 0.528434
-neted:      0.693614 6.445643 109.023430 209.443497 218.316010
-erA:         0.000  8.618 12.818 16.623 20.506 24.510 29.298 35.372 43.102 55.354  0.000
-sky_res:    0.458065
-map_lenght: 196587
-Qveto:      48.586632 41.129078
-wat version = 2G
-online version = 1
-search=r
-## number of events with rho>= rho of the event | corresponding rate | start time of the analyzed segment list | end time of the analyzed segment list | duration of the analyzed segment list
-#significance based on the last processed job (about 180 seconds)
-1 %(far).9f 1126799464 1126800064 600
-#significance based on the last hour
-38 %(far).9f 1137246076 1137250424 4348
-#significance based on the last day
-5218 %(far).9f 1136639504 1137250424 610920
-#significance based on all the processed livetime in the run
-282527 %(far).9f 1126595840 1137025824 10429984
-/home/drago/online/O1_LH_ONLINE/JOBS/113731/1137313460-1137313520/OUTPUT.merged/TRIGGERS/trigger_1137313504.8337.txt
-'''
-
 #-----------
 # CBC
 #-----------
@@ -314,25 +228,77 @@ class CBCPipeline(Pipeline):
     def genFilename(self, directory="."):
         randStr = "".join(random.choice(letters) for _ in xrange(6))
         coinc   = os.path.join(directory, self.pipeline+"_coinc_"+randStr+".xml")
-        psd     = os.path.join(directory, self.pipeline+"_psd_"+randStr+".xml")
-        return coinc, psd
+
+        subdir = os.path.join(directory, randStr)
+        if not os.path.exists(subdir):
+            os.makedirs(subdir)
+
+        copyCoind = os.path.join(subdir, "coinc.xml")
+        psd       = os.path.join(subdir, "psd.xml.gz")
+        log       = os.path.join(subdir, "event.log")
+
+        return coinc, copyCoinc, psd, log
+
+    def genCoincXMLdoc(self):
+        xmldoc = ligolw.Document()
+        xml_element = ligolw.LIGO_LW()
+        xmldoc.appendChild( xml_element )
+
+        raise NotImplementedError
+
+        return xmldoc
+
+    def genPSDXMLdoc(self):
+        xmldoc = ligolw.Document()
+        xml_element = ligolw.LIGO_LW()
+        xmldoc.appendChild( xml_element )
+
+        raise NotImplementedError
+
+        return xmldoc
+
+    def genLog(self, xmldoc):
+        """Pipeline: gstlal
+Search: HighMass
+MChirp: 1.298
+MTot: 3.23033583164
+End Time: 1137320164.440564932
+SNR: 8.436
+IFOs: H1,L1
+FAR: 6.981e-05"""
+        return {}
+
+    def writeLogFile( logData, filename ):
+        raise NotImplementedError
 
     def genFiles(self, directory='.'):
         '''
         write the files needed to create this event. Also return any files that are automatically uploaded shortly thereafter
         return firstFile, [(dt, message, otherFile1), (dt, message, otherFile2), ...]
         '''
-        coincFilename, psdFilename = self.genFilename(directory=directory)
+        ### generate filenames
+        coincFilename, copyCoincFilename, psdFilename, logFilename = self.genFilename(directory=directory)
 
-        print 'WARNING: only touching files...'
-        open(coincFilename, 'w').close()
-        open(psdFilename, 'w').close()
-        ### generate:
-        ###   coinc.xml <-- main file
-        ###   psd.xml
+        ### generate data
+        coincXMLdoc = self.genCoincXMLdoc()
+        psdXMLdoc   = self.genPSDXMLdoc()
+        logData     = self.genLog(coincXMLdoc)
 
-        ###                     should set something more intelligent/random for dt and message
-        return coincFilename, [(0.0, '', psdFilename)]
+        ### write files
+        ligolw_utils.write_filename( coincXMLdoc, coincFilename, gz=coincFilename.endswith('.gz') )
+        ligolw_utils.write_filename( psdXMLdoc, psdFilename, gz=psdFilename.endswith('.gz') )
+        self.writeLog( logData, logFilename )
+
+        shutil.copy( coincFilename, copyCoincFilename ) ### copy coincFilename -> copyCoincFilename
+
+        ### return
+        ancilliary = [
+                      (max(0, random.normalvariate(0.5,1)), 'Log File Created', logFilename),
+                      (max(0, random.normalvariate(1,0.1)), 'Coinc Table created', copyCoincFilename), 
+                      (max(0, random.normalvariate(10, 1)), 'strain spectral densities', psdFilename),
+                     ]
+        ancilliary.sort(key=lambda l:l[0])
+        return coincFilename, ancilliary
 
 class GSTLAL(CBCPipeline):
     '''
@@ -340,6 +306,29 @@ class GSTLAL(CBCPipeline):
     '''
     pipeline = 'gstlal'
     allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
+
+    def genRankFilename(self, directory='.'):
+        return os.path.join(directory, 'ranking_data.xml.gz')
+
+    def genRankXMLdoc(self):
+        xmldoc = ligolw.Document()
+        xml_element = ligolw.LIGO_LW()
+        xmldoc.appendChild( xml_element )
+
+        raise NotImplementedError
+
+        return xmldoc
+
+    def genFiles(self, directory='.'):
+        coincFilename, ancilliary = super(GSTLAL,self).genFiles(directory=directory)
+
+        rankFilename = self.genRankFilename(directory=os.path.dirname(ancilliary[0][-1]))
+        rankXMLdoc = self.genRankXMLdoc()
+        ligolw_utils.write_filename( rankXMLdoc, rankFilename, gz=rankFilename.endswith('.gz') )
+
+        ancilliary.append( (max(0, random.normalvariate(15, 1)), 'ranking statistic PDFs', rankFilename) )
+        ancilliary.sort( key=lambda l:l[0] )
+        return coincFilename, ancilliary 
 
 class GSTLALSpiir(CBCPipeline):
     '''
@@ -355,12 +344,43 @@ class MBTAOnline(CBCPipeline):
     pipeline = 'MBTAOnline'
     allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
+    def genFiles(self, directory='.'):
+        coincFilename, ancilliary = super(GSTLAL,self).genFiles(directory=directory)
+
+        for ind, (dt, message, filename) in enumerate(ancilliary):
+            if message == "strain spectral densities":
+                ancilliary[ind] = (dt, 'PSDs', filename)
+                break
+        else:
+            raise ValueError('could not find "strain spectral densities" message')
+
+        raise NotImplementedError('write MBTA\'s "ITF triggers" plots and "Matched filter outputs" plot')
+
+        return coincFilename, ancilliary
+
 class PYCBC(CBCPipeline):
     '''
     a Pipeline for pycbc
     '''
     pipeline = 'pycbc'
     allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
+
+    def genFiles(self, directory='.'):
+        coincFilename, ancilliary = super(GSTLAL,self).genFiles(directory=directory)
+
+        for ind, (dt, message, filename) in enumerate(ancilliary):
+            if message == "strain spectral densities":
+                ancilliary[ind] = (dt, 'PyCBC PSD estimate from the time of event', filename)
+                break
+        else:
+            raise ValueError('could not find "strain spectral densities" message')
+
+        return coincFilename, ancilliary
+
+
+
+
+
 
 '''
 This XML file does not appear to have any style information associated with it. The document tree is shown below.
