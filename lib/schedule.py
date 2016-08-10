@@ -156,9 +156,7 @@ class CreateEvent(Action):
         gdb = GraceDb(self.gdb_url)
         httpResponse = gdb.createEvent( self.group, self.pipeline, self.filename, search=self.search )
         httpString = httpResponse.read()
-
-        print httpString
-
+#        print httpString
         self.graceDBevent.set_graceid( json.loads( httpString )['graceid'] ) 
 
 class WriteLabel(Action):
@@ -183,8 +181,7 @@ class WriteLabel(Action):
     def writeLabel(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
         httpResponse = gdb.writeLabel( self.graceDBevent.get_graceid(), self.label )
-
-        print httpResponse.read()
+#        print httpResponse.read()
 
 class RemoveLabel(Action):
     '''
@@ -208,8 +205,7 @@ class RemoveLabel(Action):
     def removeLabel(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
         httpResponse = gdb.removeLabel( self.graceDBevent.get_graceid(), self.label )
-
-        print httpResponse.read()
+#        print httpResponse.read()
 
 class WriteLog(Action):
     '''
@@ -223,7 +219,7 @@ class WriteLog(Action):
         self.filename = filename
         self.tagname = tagname
       
-        super(WriteLog, self).__init__(dt, writeLog)
+        super(WriteLog, self).__init__(dt, self.writeLog)
 
     def __str__(self):
         return """WriteLog -> %s
@@ -237,5 +233,4 @@ class WriteLog(Action):
     def writeLog(self, *args, **kwargs):
         gdb = GraceDb(self.gdb_url)
         httpResponse = gdb.writeLog( self.graceDBevent.get_graceid(), self.message, filename=self.filename, tagname=self.tagname )
-
-        print httpResponse.read()
+#        print httpResponse.read()

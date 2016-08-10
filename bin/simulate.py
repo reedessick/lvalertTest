@@ -186,6 +186,6 @@ for action in sched: ### iterate through actions in schedule
         try:
             action.execute() ### actually perform the action
         except Exception:
-            print traceback.print_exc()
+            traceback.print_exc()
             if raw_input("continue? (yes/no) : ")!="yes":
                 raise KeyboardInterrupt 

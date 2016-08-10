@@ -324,39 +324,43 @@ class CBCPipeline(Pipeline):
         '''
         coincFilename, psdFilename = self.genFilename(directory=directory)
 
+        print 'WARNING: only touching files...'
+        open(coincFilename, 'w').close()
+        open(psdFilename, 'w').close()
         ### generate:
         ###   coinc.xml <-- main file
         ###   psd.xml
 
-        raise NotImplementedError
+        ###                     should set something more intelligent/random for dt and message
+        return coincFilename, [(0.0, '', psdFilename)]
 
 class GSTLAL(CBCPipeline):
     '''
     a Pipeline for GSTLAL
     '''
     pipeline = 'gstlal'
-    allowed_searches = ['LowMass', 'HighMass', None]
+    allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
 class GSTLALSpiir(CBCPipeline):
     '''
     a Pipeline for GSTLAL-Spirr
     '''
     pipeline = 'gstlal-spiir'
-    allowed_searches = ['LowMass', 'HighMass', None]
+    allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
 class MBTAOnline(CBCPipeline):
     '''
     a Pipeline for MBTA
     '''
-    pipeline = 'mbtaonline'
-    allowed_searches = ['LowMass', 'HighMass', None]
+    pipeline = 'MBTAOnline'
+    allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
 class PYCBC(CBCPipeline):
     '''
     a Pipeline for pycbc
     '''
     pipeline = 'pycbc'
-    allowed_searches = ['AllSky', None]
+    allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
 '''
 This XML file does not appear to have any style information associated with it. The document tree is shown below.
