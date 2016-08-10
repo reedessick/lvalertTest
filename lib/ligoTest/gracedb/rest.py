@@ -9,7 +9,7 @@ import shutil
 
 #-------------------------------------------------
 
-class GraceDb():
+class FakeDb():
     """
     a "fake" GraceDb that provides some basic functionality managed through the local filesystem.
 
@@ -23,6 +23,8 @@ class GraceDb():
 
     def __init__(self, directory='.'):
         self.home = directory
+
+    ### generic utils and data management ###
 
     def __genGraceID__(self, group):
         '''
@@ -94,7 +96,8 @@ class GraceDb():
                 pickle.dump([], file_obj)
                 file_obj.close()
 
-    ### insertion
+    ### insertion ###
+
     def __writeTopLevel__(self, graceid, group, pipeline, search=None, data={}):
         self.__write__({'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevel__(graceid))
 
@@ -114,23 +117,32 @@ class GraceDb():
         ### write filename to local
         self.writeLog( graceid, 'initial data', filename=filename )
 
+    ### annotation ###
+
     def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=None, displayName=None):
         json = {'message':message, filename:filename, tagname:tagname}
         ind = self.__append__(json, self.__logs__(graceid))
         if filename:
             self.__copyFile__( graceid, filename, ind=ind)
         
+    def writeFile(self, graceid, filename, filecontents=None):
+        self.writeLog( graceid, '', filename=filename, filecontents=filecontents)
+
     def writeLabel(self, graceid, label):
         json = {'message':'applying label: %s'%label, 'filename':None, 'tagname':None}
         ind = self.__append__(json, self.__logs__(graceid))
         self.__append__( (label, ind), self.__labelsPath__(graceid) )
 
-    ### queries
+    def removeLabel(self, graceid, label):
+        raise NotImplementedError('this is not implemented in the real GraceDb, so we do not implement it here. At least, not yet.')
+
+    ### queries ###
+
     def event(self, graceid):
         return self.__extract__(self.__topLevelPath__(graceid))
 
     def events(self, query=None, orderby=None, count=None, columns=None):
-        raise NotImplementedError
+        raise NotImplementedError('not sure how to support query logic easily...')
 
     def logs(self, graceid):
         return self.__extract__(self.__logsPath__(graceid))
