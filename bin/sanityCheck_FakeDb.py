@@ -20,7 +20,7 @@ opts, args = parser.parse_args()
 #-------------------------------------------------
 
 '''
-we should check the following:
+we should check the following: (via assertion statements!)
 
     event creation and creation of local directory structure
 
