@@ -4,6 +4,7 @@ author = "reed.essick@ligo.org"
 #-------------------------------------------------
 
 import os
+import pickle
 import glob
 import shutil
 
@@ -22,6 +23,8 @@ class FakeDb():
                        }
 
     def __init__(self, directory='.'):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         self.home = directory
 
     ### generic utils and data management ###
@@ -32,12 +35,12 @@ class FakeDb():
         returns the biggest one +1
         if none exist, starts at 000000
         '''
-        existing = [int(_[1:]) for _ in glob.glob(self.home)]
+        existing = [int(os.path.basename(_.strip('/'))[1:]) for _ in glob.glob("%s/*/"%self.home)]
         if existing:
             ind = max(existing)+1
         else:
             ind = 0
-        return "%s%06d"%(self.__group2letter__[group], max(existing)+1)
+        return "%s%06d"%(self.__group2letter__[group], ind)
             
     def __directory__(self, graceid):
         '''
@@ -91,7 +94,7 @@ class FakeDb():
                      self.__labelsPath__(graceid), 
                      self.__logsPath__(graceid),
                     ]
-            for filename in paths:
+            for path in paths:
                 file_obj = open(path, 'w')
                 pickle.dump([], file_obj)
                 file_obj.close()
@@ -99,7 +102,7 @@ class FakeDb():
     ### insertion ###
 
     def __writeTopLevel__(self, graceid, group, pipeline, search=None, data={}):
-        self.__write__({'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevel__(graceid))
+        self.__write__({'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevelPath__(graceid))
 
     def __copyFile__(self, graceid, filename, ind=None):
         newFilename = os.path.join(self.home, graceid, os.path.basename(filename))
@@ -108,20 +111,29 @@ class FakeDb():
         return newFilename
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
-        graceid = self.__genGraceID__(self, group) ### generate the graceid
+        group    = group.lower()
+        pipeline = pipeline.lower()
+        if search: 
+            search = search.lower()
+
+        graceid = self.__genGraceID__(group) ### generate the graceid
         self.__createDirectory__(graceid) ### create local directory
 
         ### write top level data
-        self.__writeTopLevel( graceid, group, pipeline, search=search )
+        self.__writeTopLevel__( graceid, group, pipeline, search=search )
 
         ### write filename to local
         self.writeLog( graceid, 'initial data', filename=filename )
+
+#        raise RuntimeWarning('need to return something like an httpResponse for event creation...')
+        print('need to return something like an httpResponse for event creation...')
+        return graceid
 
     ### annotation ###
 
     def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=None, displayName=None):
         json = {'message':message, filename:filename, tagname:tagname}
-        ind = self.__append__(json, self.__logs__(graceid))
+        ind = self.__append__(json, self.__logsPath__(graceid))
         if filename:
             self.__copyFile__( graceid, filename, ind=ind)
         
@@ -130,7 +142,7 @@ class FakeDb():
 
     def writeLabel(self, graceid, label):
         json = {'message':'applying label: %s'%label, 'filename':None, 'tagname':None}
-        ind = self.__append__(json, self.__logs__(graceid))
+        ind = self.__append__(json, self.__logsPath__(graceid))
         self.__append__( (label, ind), self.__labelsPath__(graceid) )
 
     def removeLabel(self, graceid, label):
