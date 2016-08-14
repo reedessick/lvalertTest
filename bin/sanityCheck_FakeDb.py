@@ -51,7 +51,7 @@ for x in xrange(opts.Nevents):
 
     ### create the event
     response = gdb.createEvent(opts.group, opts.pipeline, tmpfilename, search=opts.search).json()
-    graceid = response['uid']
+    graceid = response['graceid']
     graceids[graceid] = {'logs'   : [], 
                          'labels' : [], 
                          'files'  : [],

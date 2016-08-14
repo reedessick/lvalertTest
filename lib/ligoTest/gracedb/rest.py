@@ -7,8 +7,12 @@ import os
 import glob
 import shutil
 
+import getpass
+
 import pickle
 import json
+
+import time
 
 #-------------------------------------------------
 
@@ -128,17 +132,86 @@ class FakeDb():
                 pickle.dump([], file_obj)
                 file_obj.close()
 
+    def __newfilename__(self, graceid, filename):
+        return os.path.join(self.home, graceid, os.path.basename(filename))
+
+    def __copyFile__(self, graceid, filename):
+        newFilename = self.__newfilename__(graceid, filename)
+        shutil.copyfile(filename, newFilename)
+        self.__append__( newFilename, self.__filesPath__(graceid) )
+
     ### insertion ###
 
-    def __writeTopLevel__(self, graceid, group, pipeline, search=None, data={}):
-        self.__write__({'uid':graceid, 'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevelPath__(graceid))
+    def __createEvent__(self, graceid, group, pipeline, filename, search=None):
+        jsonD = {'graceid':graceid,
+                 'group'  :group,
+                 'pipeline':pipeline,
+                 'search':search,
+                 'created':time.time(),
+                 'submitter':getpass.getuser()+'@ligo.org',
+                 'links': {'neighbors':'',
+                           'files':self.__filesPath__(graceid),
+                           'log':self.__logsPath__(graceid),
+                           'tags':'',
+                           'self':self.__directory__(graceid),
+                           'labels':self.__labelsPath__(graceid),
+                           'filemeta':self.__topLevelPath__(graceid),
+                           'emobservations':'',
+                          },
+                }
 
-    def __copyFile__(self, graceid, filename, ind=None):
-        newFilename = os.path.join(self.home, graceid, os.path.basename(filename))
-        shutil.copyfile(filename, newFilename)
-        self.__append__( (newFilename, ind), self.__filesPath__(graceid) )
+        ### extract these by parsing filename!
+        jsonD.update( self.__file2extraattributes__(pipeline, filename) )
+         
+        ### write top level data to file 
+        self.__write__( jsonD, self.__topLevelPath__(graceid) )
 
-        return newFilename
+        lvalert = {"alert_type": "new",
+                   "description": "",
+                   "file": self.__newfilename__(graceid, filename),
+                   "object": jsonD,
+                   "uid": graceid,
+                  }
+
+        return jsonD, lvalert
+
+    def __file2extraattributes__(self, pipeline, filename):
+        '''
+u'gpstime': 1154831065.0, 
+u'far': 1e-09, 
+u'instruments': u'H1,L1', 
+u'extra_attributes': {u'MultiBurst': {u'central_freq': 267.912609, 
+                                      u'false_alarm_rate': None, 
+                                      u'confidence': None, 
+                                      u'start_time_ns': 995943308, 
+                                      u'start_time': 1154831064, 
+                                      u'ligo_angle_sig': None, 
+                                      u'bandwidth': 105.092647, 
+                                      u'snr': 11.4891252930761, 
+                                      u'ligo_angle': None, 
+                                      u'amplitude': 7.34901040001, 
+                                      u'ligo_axis_ra': 230.847338, 
+                                      u'duration': 0.009907574, 
+                                      u'ligo_axis_dec': 96.948379, 
+                                      u'ifos': u'', 
+                                      u'peak_time': None, 
+                                      u'peak_time_ns': None
+                                     } 
+                     }, 
+u'nevents': None, 
+u'likelihood': 132.0, 
+u'far_is_upper_limit': False
+}'''
+        ### instruments
+        ### far
+        ### likelihood
+        ### gpstime
+        ### extra_attributes
+
+        raise NotImplementedError('extract a few key parameters based on the pipeline')
+
+        ans = {}
+        return ans
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
         group    = group.lower()
@@ -147,45 +220,100 @@ class FakeDb():
             search = search.lower()
 
         graceid = self.__genGraceID__(group) ### generate the graceid
-        self.__createDirectory__(graceid) ### create local directory
+        self.__createDirectory__(graceid) ### create local directory and all necessary files
 
         ### write top level data
-        self.__writeTopLevel__( graceid, group, pipeline, search=search )
-        ans = self.event( graceid ) 
-        self.sendlvalert( ans.data )
+        jsonD, lvalert = self.__createEvent__( graceid, group, pipeline, filename, search=search )
+        self.sendlvalert( lvalert )
 
         ### write filename to local
-        self.sendlvalert( self.writeLog( graceid, 'initial data', filename=filename ).data ) ### sends alert about log message
+        self.writeLog( graceid, 'initial data', filename=filename ) ### sends alert about log message
 
-        return ans
+        return FakeTTPResponse( jsonD )
 
     ### annotation ###
 
-    def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=None, displayName=None):
+    def __log__(self, graceid, message, filename=None, tagname=[]):
+        username = getpass.getuser()
 
-        jsonD = {'message':message, filename:filename, tagname:tagname}
-
-        ind = self.__append__(jsonD, self.__logsPath__(graceid))
         if filename:
-            self.__copyFile__( graceid, filename, ind=ind)
+            shortFilename = os.path.basename(filename)
+        else:
+            shortFilename = ''
 
-        ans = FakeTTPResponse( jsonD )
-        self.sendlvalert( ans.data )
-        return ans
-       
+        jsonD = {'comment': message,
+                 'created': time.time(),
+                 'self': self.__logsPath__(graceid),
+                 'file_version': 0,  
+                 'filename': shortFilename,
+                 'tag_names': tagname,
+                 'file': '',
+                 'N': 0,  
+                 'tags': '',
+                 'issuer': {'username': username+'@LIGO.ORG',
+                            'display_name': username,
+                           },
+                }
+
+        ind = self.__append__( jsonD, self.__logsPath__(graceid))
+        if filename:
+            self.__copyFile__(graceid, filename)
+
+        lvalert = {'uid':graceid, 
+                   "alert_type": "update",
+                   "description": message,
+                   "file": shortFilename,
+                   "object": {
+                              "N": ind,
+                              "comment": message,
+                              "created": time.time(),
+                              "file": shortFilename,
+                              "file_version": 0,
+                              "filename": shortFilename,
+                              "issuer": {
+                                         "display_name": username,
+                                         "username": username+"@ligo.org"
+                                        },
+                              "self": "",
+                              "tag_names": tagname,
+                              "tags": "",
+                             },
+                  } 
+
+        return jsonD, lvalert
+
+    def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=[], displayName=None):
+
+        jsonD, lvalert = self.__log__(graceid, message, filename=filename, tagname=tagname )
+
+        self.sendlvalert( lvalert )
+        return FakeTTPResponse( jsonD )
+ 
     def writeFile(self, graceid, filename, filecontents=None):
         return self.writeLog( graceid, '', filename=filename, filecontents=filecontents)
 
+    def __label__(self, graceid, label ):
+        jsonD = {'self':self.__labelsPath__(graceid), 
+                 'creator':getpass.getuser(), 
+                 'name':label, 
+                 'created':time.time(),
+                }
+        lvalert = {'uid':graceid, 
+                   'alert_type':'label', 
+                   'description':label, 
+                   'file':'',
+                  }
+
+        self.writeLog( graceid, 'applying label : %s'%label )
+        self.__append__( jsonD, self.__labelsPath__(graceid) )
+
+        return jsonD, lvalert
+
     def writeLabel(self, graceid, label):
+        jsonD, lvalert = self.__label__( graceid, label )
 
-        jsonD = {'message':'applying label: %s'%label, 'filename':None, 'tagname':None}
-
-        ind = self.__append__(jsonD, self.__logsPath__(graceid))
-        self.__append__( (label, ind), self.__labelsPath__(graceid) )
-
-        ans = FakeTTPResponse( jsonD )
-        self.sendlvalert( ans.data )
-        return ans
+        self.sendlvalert( lvalert )
+        return FakeTTPResponse( jsonD )
 
     def removeLabel(self, graceid, label):
         raise NotImplementedError('this is not implemented in the real GraceDb, so we do not implement it here. At least, not yet.')
@@ -196,13 +324,31 @@ class FakeDb():
         raise NotImplementedError('not sure how to support query logic easily...')
 
     def event(self, graceid):
-        return FakeTTPResponse( self.__extract__( self.__topLevelPath__(graceid) ) )
+        topLevel = self.__extract__( self.__topLevelPath__(graceid) )
+        topLevel.update( {'labels':dict( (label['name'], label['self']) for label in self.__extract__( self.__labelsPath__(graceid) ) )} )
+
+        return FakeTTPResponse( topLevel )
 
     def logs(self, graceid):
-        return FakeTTPResponse( self.__extract__( self.__logsPath__(graceid) ) )
+        logs = self.__extract__( self.__logsPath__(graceid) )
+        return FakeTTPResponse( {'numRows':len(logs),
+                                 'start':0,
+                                 'log': logs,
+                                 'links':{'self':self.__logPath__(graceid),
+                                          'first':self.__logPath__(graceid),
+                                          'last':self.__logPath__(graceid), 
+                                         },
+                                }
+                              )
 
     def labels(self, graceid, label=''):
-        return FakeTTPResponse( self.__extract__( self.__labelsPath__(graceid) ) )
+        return FakeTTPResponse( {'labels':self.__extract__( self.__labelsPath__(graceid) ),
+                                 'links': [{'self':self.__labelsPath__(graceid),
+                                           'event':self.__directory__(graceid),
+                                           }
+                                          ],
+                                }
+                              )
 
     def files(self, graceid, filename=None, raw=False):
-        return FakeTTPResponse( self.__extract__( self.__filesPath__(graceid) ) )
+        return FakeTTPResponse( dict( (os.path.basename(filename), filename) for filename in self.__extract__( self.__filesPath__(graceid) ) ) )
