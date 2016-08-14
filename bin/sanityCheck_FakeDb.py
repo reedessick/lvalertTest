@@ -47,10 +47,11 @@ open(tmpfilename, 'w').close()
 graceids = {}
 for x in xrange(opts.Nevents):
     if opts.verbose:
-        print "    %d / %d"%(x+1, opts.Nevents)
+        print "    %d / %d : group, pipeline, search = %s, %s, %s"%(x+1, opts.Nevents, opts.group, opts.pipeline, opts.search)
 
     ### create the event
-    graceid = gdb.createEvent(opts.group, opts.pipeline, tmpfilename, search=opts.search)
+    response = gdb.createEvent(opts.group, opts.pipeline, tmpfilename, search=opts.search).json()
+    graceid = response['uid']
     graceids[graceid] = {'logs'   : [], 
                          'labels' : [], 
                          'files'  : [],
@@ -62,7 +63,8 @@ for x in xrange(opts.Nevents):
     ### put some stuff into the event
     ### writeLabel
     for label in set( [random.choice(labels) for _ in xrange(5)] ):
-        gdb.writeLabel( graceid, label )
+        response = gdb.writeLabel( graceid, label ).json()
+        graceids[graceid]['logs'].append( response )
         graceids[graceid]['labels'].append( label )
     
     ### removeLabel
@@ -71,31 +73,48 @@ for x in xrange(opts.Nevents):
     ### writeLog
     for num in xrange(5):
         message = 'message number : %d'%(num+1)
-        gdb.writeLog( graceid, message='message number : %d'%(num+1) )
-        graceids[graceid]['logs'].append( (message, None) )
+        response = gdb.writeLog( graceid, message='message number : %d'%(num+1) ).json()
+        graceids[graceid]['logs'].append( response )
 
     for num in xrange(5):
         message  = "message with file number : %d"%(num+1)
         filename = os.path.join( opts.output_dir, "%s-%d.txt"%(graceid, num+1) )
         open(filename, 'w').close()
-        gdb.writeLog( graceid, message=message, filename=filename )
-        graceids[graceid]['logs'].append( (message, filename) )
+
+        response = gdb.writeLog( graceid, message=message, filename=filename ).json()
+
+        graceids[graceid]['logs'].append( response )
         graceids[graceid]['files'].append( filename )
 
     ### writeFile
     for num in xrange(5):
         filename = os.path.join( opts.output_dir, "%s_%d.txt"%(graceid, num+1) )
         open(filename, 'w').close()
-        gdb.writeFile( graceid, filename=filename )
+
+        response = gdb.writeFile( graceid, filename=filename ).json()
+
+        graceids[graceid]['logs'].append( response )
         graceids[graceid]['files'].append( filename )
+
+for graceid in sorted(graceids.keys()):
 
     ### query information about this event
     ### event
+    response = gdb.event( graceid ).json()
+    raise NotImplementedError('set up assertion statements to make sure queries return what we put in them')
+
     ### logs
+    response = gdb.logs( graceid ).json()
+    raise NotImplementedError('set up assertion statements to make sure queries return what we put in them')
+
     ### labels
+    response = gdb.labels( graceid ).json()
+    raise NotImplementedError('set up assertion statements to make sure queries return what we put in them')
+
     ### files
+    response = gdb.files( graceid ).json()
     raise NotImplementedError('set up assertion statements to make sure queries return what we put in them')
 
 ### query things about groups of events
 ### events
-raise NotImplementedError
+raise NotImplementedError('need to set up queries over multiple events?')

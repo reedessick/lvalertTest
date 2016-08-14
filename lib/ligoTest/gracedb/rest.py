@@ -4,9 +4,29 @@ author = "reed.essick@ligo.org"
 #-------------------------------------------------
 
 import os
-import pickle
 import glob
 import shutil
+
+import pickle
+import json
+
+#-------------------------------------------------
+
+class FakeTTPResponse():
+    """
+    a "fake" httpResponse that provides some basic functionality
+    """
+
+    def __init__(self, data):
+        self.data = json.dumps( data )
+
+    def read(self):
+        ans = self.data
+        self.data = ''
+        return ans
+
+    def json(self):
+        return json.loads( self.read() )
 
 #-------------------------------------------------
 
@@ -26,6 +46,12 @@ class FakeDb():
         if not os.path.exists(directory):
             os.makedirs(directory)
         self.home = directory
+        self.lvalert = os.path.join(directory, 'lvalert.out') ### file into which we write lvalert messages
+
+    def sendlvalert(self, message ):
+        file_obj = open(self.lvalert, 'w')
+        print >> file_obj, message
+        file_obj.close()
 
     ### generic utils and data management ###
 
@@ -40,6 +66,7 @@ class FakeDb():
             ind = max(existing)+1
         else:
             ind = 0
+
         return "%s%06d"%(self.__group2letter__[group], ind)
             
     def __directory__(self, graceid):
@@ -65,6 +92,7 @@ class FakeDb():
         ans = self.__extract__(path)
         ans.append(stuff)
         self.__write__(ans, path)
+
         return len(ans)-1
 
     def __write__(self, stuff, path):
@@ -78,6 +106,7 @@ class FakeDb():
         file_obj = open(path, 'r')
         ans = pickle.load(file_obj)
         file_obj.close()
+
         return ans
 
     def __createDirectory__(self, graceid):
@@ -102,12 +131,13 @@ class FakeDb():
     ### insertion ###
 
     def __writeTopLevel__(self, graceid, group, pipeline, search=None, data={}):
-        self.__write__({'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevelPath__(graceid))
+        self.__write__({'uid':graceid, 'group':group, 'pipeline':pipeline, 'search':search, 'data':data}, self.__topLevelPath__(graceid))
 
     def __copyFile__(self, graceid, filename, ind=None):
         newFilename = os.path.join(self.home, graceid, os.path.basename(filename))
         shutil.copyfile(filename, newFilename)
         self.__append__( (newFilename, ind), self.__filesPath__(graceid) )
+
         return newFilename
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
@@ -121,46 +151,58 @@ class FakeDb():
 
         ### write top level data
         self.__writeTopLevel__( graceid, group, pipeline, search=search )
+        ans = self.event( graceid ) 
+        self.sendlvalert( ans.data )
 
         ### write filename to local
-        self.writeLog( graceid, 'initial data', filename=filename )
+        self.sendlvalert( self.writeLog( graceid, 'initial data', filename=filename ).data ) ### sends alert about log message
 
-#        raise RuntimeWarning('need to return something like an httpResponse for event creation...')
-        print('need to return something like an httpResponse for event creation...')
-        return graceid
+        return ans
 
     ### annotation ###
 
     def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=None, displayName=None):
-        json = {'message':message, filename:filename, tagname:tagname}
-        ind = self.__append__(json, self.__logsPath__(graceid))
+
+        jsonD = {'message':message, filename:filename, tagname:tagname}
+
+        ind = self.__append__(jsonD, self.__logsPath__(graceid))
         if filename:
             self.__copyFile__( graceid, filename, ind=ind)
-        
+
+        ans = FakeTTPResponse( jsonD )
+        self.sendlvalert( ans.data )
+        return ans
+       
     def writeFile(self, graceid, filename, filecontents=None):
-        self.writeLog( graceid, '', filename=filename, filecontents=filecontents)
+        return self.writeLog( graceid, '', filename=filename, filecontents=filecontents)
 
     def writeLabel(self, graceid, label):
-        json = {'message':'applying label: %s'%label, 'filename':None, 'tagname':None}
-        ind = self.__append__(json, self.__logsPath__(graceid))
+
+        jsonD = {'message':'applying label: %s'%label, 'filename':None, 'tagname':None}
+
+        ind = self.__append__(jsonD, self.__logsPath__(graceid))
         self.__append__( (label, ind), self.__labelsPath__(graceid) )
+
+        ans = FakeTTPResponse( jsonD )
+        self.sendlvalert( ans.data )
+        return ans
 
     def removeLabel(self, graceid, label):
         raise NotImplementedError('this is not implemented in the real GraceDb, so we do not implement it here. At least, not yet.')
 
     ### queries ###
 
-    def event(self, graceid):
-        return self.__extract__(self.__topLevelPath__(graceid))
-
     def events(self, query=None, orderby=None, count=None, columns=None):
         raise NotImplementedError('not sure how to support query logic easily...')
 
+    def event(self, graceid):
+        return FakeTTPResponse( self.__extract__( self.__topLevelPath__(graceid) ) )
+
     def logs(self, graceid):
-        return self.__extract__(self.__logsPath__(graceid))
+        return FakeTTPResponse( self.__extract__( self.__logsPath__(graceid) ) )
 
     def labels(self, graceid, label=''):
-        return self.__extract__(self.__labelsPath__(graceid))
+        return FakeTTPResponse( self.__extract__( self.__labelsPath__(graceid) ) )
 
     def files(self, graceid, filename=None, raw=False):
-        return self.__extract__(self.__filesPath__(graceid))
+        return FakeTTPResponse( self.__extract__( self.__filesPath__(graceid) ) )
