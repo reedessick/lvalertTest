@@ -244,6 +244,9 @@ class CBCPipeline(Pipeline):
         xml_element = ligolw.LIGO_LW()
         xmldoc.appendChild( xml_element )
 
+        ### just generate CoincInspiralTable?
+        ### don't worry about process params table, SingleInspiralTable, CoincMapTable, CoincTable
+
         raise NotImplementedError
 
         return xmldoc
@@ -253,23 +256,32 @@ class CBCPipeline(Pipeline):
         xml_element = ligolw.LIGO_LW()
         xmldoc.appendChild( xml_element )
 
+        ### generate this from an analytic formula...
+        ###   or draw the actual values from analytic formula using chi2 distribution?
+
         raise NotImplementedError
 
         return xmldoc
 
     def genLog(self, xmldoc):
-        """Pipeline: gstlal
-Search: HighMass
-MChirp: 1.298
-MTot: 3.23033583164
-End Time: 1137320164.440564932
-SNR: 8.436
-IFOs: H1,L1
-FAR: 6.981e-05"""
-        return {}
+        coinc = table.get_table(xmldoc, lsctables.CoincInspiralTable.tableName)
+        for row in coinc:
+            ans ={'Pipeline': self.pipeline,
+                  'Search'  : self.search,
+                  'MChirp'  : row.mchirp,
+                  'MTot'    : row.mass,
+                  'End Time': row.end_time + 1e-9*row.end_time_ns,
+                  'SNR'     : row.snr,
+                  'IFOs'    : row.ifos,
+                  'FAR'     : row.far_alarm_rate,
+                 }
+        return ans
 
     def writeLogFile( logData, filename ):
-        raise NotImplementedError
+        file_obj = open(filename, 'w')
+        for key, val in logData.items():
+            print >> file_obj, "%s : %s"%(key, val)
+        file_obj.close()
 
     def genFiles(self, directory='.'):
         '''
@@ -315,6 +327,8 @@ class GSTLAL(CBCPipeline):
         xml_element = ligolw.LIGO_LW()
         xmldoc.appendChild( xml_element )
 
+        ### just upload an empty xml for now?
+
         raise NotImplementedError
 
         return xmldoc
@@ -353,6 +367,8 @@ class MBTAOnline(CBCPipeline):
                 break
         else:
             raise ValueError('could not find "strain spectral densities" message')
+
+        ### just skip these for now?
 
         raise NotImplementedError('write MBTA\'s "ITF triggers" plots and "Matched filter outputs" plot')
 
