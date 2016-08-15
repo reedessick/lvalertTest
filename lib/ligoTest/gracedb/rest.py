@@ -14,6 +14,11 @@ import json
 
 import time
 
+from glue.ligolw import utils as ligolw_utils
+from glue.ligolw import ligolw
+from glue.ligolw import table
+from glue.ligolw import lsctables
+
 #-------------------------------------------------
 
 class FakeTTPResponse():
@@ -176,42 +181,75 @@ class FakeDb():
         return jsonD, lvalert
 
     def __file2extraattributes__(self, pipeline, filename):
-        '''
-u'gpstime': 1154831065.0, 
-u'far': 1e-09, 
-u'instruments': u'H1,L1', 
-u'extra_attributes': {u'MultiBurst': {u'central_freq': 267.912609, 
-                                      u'false_alarm_rate': None, 
-                                      u'confidence': None, 
-                                      u'start_time_ns': 995943308, 
-                                      u'start_time': 1154831064, 
-                                      u'ligo_angle_sig': None, 
-                                      u'bandwidth': 105.092647, 
-                                      u'snr': 11.4891252930761, 
-                                      u'ligo_angle': None, 
-                                      u'amplitude': 7.34901040001, 
-                                      u'ligo_axis_ra': 230.847338, 
-                                      u'duration': 0.009907574, 
-                                      u'ligo_axis_dec': 96.948379, 
-                                      u'ifos': u'', 
-                                      u'peak_time': None, 
-                                      u'peak_time_ns': None
-                                     } 
-                     }, 
-u'nevents': None, 
-u'likelihood': 132.0, 
-u'far_is_upper_limit': False
-}'''
-        ### instruments
-        ### far
-        ### likelihood
-        ### gpstime
-        ### extra_attributes
+        if pipeline == 'cwb':
+            file_obj = open(filename, 'r')
+            ans = {'extra_attributes':{
+                                      },
+                  }
 
-        raise NotImplementedError('extract a few key parameters based on the pipeline')
+            far = np.infty
 
-        ans = {}
-        return ans
+            for line in file_obj:
+                try:
+                    key, val = line.split(':')
+                    key = key.strip()
+                    if key == "likelihood":
+                        ans['likelihood'] = float(val.strip())
+                    elif key == 'time':
+                        ans['gpstime'] = float(val.split()[0].strip())
+                    elif key == 'ifo':
+                        ans['instruments'] = ",".join(val.split())
+                except:
+                    if "significance based on " in line: ### next line is a FAR statement
+                        fields = [float(_) for _ in file_obj.readline().strip()]
+                        ans['far'] = fields[1]
+                        break
+                        
+            return ans
+
+        elif pipeline == 'lib':
+            file_obj = open(filename, 'r')
+            a = json.loads( file_obj.read() )[0]
+            file_obj.close()
+
+            ans = {'gpstime'    : a['gpstime'],
+                   'FAR'        : a['far'],
+                   'instruments': a['instruments'],
+                   'likelihood' : a['likelihood'],
+                   'nevents'    : a['nevents'],
+                   'extra_attributes' : {'raw FAR'    : a['raw FAR'],
+                                         'BCI'        : a['BCI'], 
+                                         'BSN'        : a['BSN'],
+                                         'Omicron SNR': a['Omicron SNR'],
+                                         'timeslides' : a['timeslides'], 
+                                         'hrss'       : a['hrss'],
+                                         'frequency'  : a['frequency'],
+                                         'quality'    : a['quality'],
+                                        },
+                  }
+
+            return ans
+
+        elif pipeline in ['gstlal', 'gstlal-spiir', 'mbtaonline', 'pycbc']:
+            xmldoc = ligolw_utils.load_filename(filename, contenthandler=lsctables.use_in(ligolw.LIGOLWContentHandler))
+
+            ### extract table
+            coinc = table.get_table(xmldoc, lsctables.CoincInspiralTable.tableName)
+
+            ### fill in ans with
+            for row in coinc:
+                ans = {'far' : row.false_alarm_rate,
+                       'instruments' : row.ifos,
+                       'gpstime'     : row.end_time + 1e-9*row.end_time_ns,
+                       'extra_attributes': {
+                                           },
+                      }
+
+            return ans
+
+        else:
+            raise ValueError('pipeline=%s not understood'%pipeline)
+
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
         group    = group.lower()
