@@ -11,17 +11,52 @@ import random
 
 import schedule
 
+import numpy as np
+
 from glue.ligolw import ligolw
 from glue.ligolw import utils as ligolw_utils
 from glue.ligolw import lsctables
 from glue.ligolw import table
 
-import types
+from lal import series
 
 #-------------------------------------------------
 
 ### define useful variables
 letters = "a b c d e f g h i j k l m n o p q r s t u v w x y z".split()
+
+#-------------------------------------------------
+
+def simulateASD(fmin, fmax, df=1./64, a0=1.e-23, a1_f=350, a2_f=200., a3_f=100., a4_f=20.):
+    '''
+    generates a simulated sampling of a PSD between fmin and fmax, with samples every "df"
+
+    asd = a0*(1 + a1*x + a2*x**-0.5 + a3*x**-2 + a4*x**-8)
+
+    where x = f/fref
+
+    a0 : set's the overall amplitude
+    a1_f : frequency at which the constant term is equal to the linear term
+    a2_f : frequency at which the linear term is equal to the sqrt term
+    a3_f : frequency at which the sqrt term is equal to the quadratic term
+    a4_f : frequency at which the quadratic term is equal to the f**-8 term
+
+    return asd
+    '''
+    f = np.arange(fmin, fmax, df)
+    fref = 100.0
+
+    x = f/fref
+
+    a1 = a1_f/fref
+    a2 = a1 * (a2_f/fref)**0.5
+    a3 = a2 * (a3_f/fref)**1.5
+    a4 = a3 * (a4_f/fref)**6
+
+    asd = a0 * ( 1 + a1*x + a2*x**-0.5 + a3*x**-2 + a4*x**-8 )
+    asd[asd==np.infty] = 0.0
+
+    return asd
 
 #-------------------------------------------------
 
@@ -244,10 +279,9 @@ class CBCPipeline(Pipeline):
         xml_element = ligolw.LIGO_LW()
         xmldoc.appendChild( xml_element )
 
-        ### just generate CoincInspiralTable?
-        ### don't worry about process params table, SingleInspiralTable, CoincMapTable, CoincTable
-        ### will almost certainly need SingleInspiralTable for Bayestar to work...
+        ### generate CoincInspiralTable?
         coinc = lsctables.CoincInspiralTable()
+        xml_element.appendChild( coinc )
 
         row = lsctables.CoincInspiral()
 
@@ -267,20 +301,21 @@ class CBCPipeline(Pipeline):
 
         coinc.append( row )
 
+        ### add in a SingleInspiralTable
+        snglInsp = lsctables.SingleInspiralTable()
+        xml_element.appendChild( snglInsp )
+
+        ### FIXME: need to actually fill in SingleInspiralTable
+        ### then consider hooking this up via CoincMap and CoincTable elements
+
         return xmldoc
 
     def drawMasses(self):
         return random.normalvariate(1.4, 0.1), random.normalvariate(1.4,0.1)
 
     def genPSDXMLdoc(self):
-        xmldoc = ligolw.Document()
-        xml_element = ligolw.LIGO_LW()
-        xmldoc.appendChild( xml_element )
-
-        ### generate this from an analytic formula...
-        ###   or draw the actual values from analytic formula using chi2 distribution?
-#        raise NotImplementedError
-
+        psdDict = { (ifo, simulateASD(0, 8193, df=0.125)) for ifo in self.intsruments }
+        xmldoc = series.make_psd_xmldoc( psdDict, xmldoc=None )
         return xmldoc
 
     def genLog(self, xmldoc):
