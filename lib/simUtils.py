@@ -106,7 +106,90 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
     ### add schedule for dq
     # idq
     if config.has_section('idq'):
-        raise NotImplementedError('idq cannot be simulated')
+
+        instruments = config.get('idq', 'instruments').split()
+        classifiers = config.get('idq', 'classifiers').split()
+
+        pad_left  = config.getfloat('idq', 'pad left')
+        pad_right = config.getfloat('idq', 'pad right')
+
+        maxFAP = config.getfloat('idq', 'maxFAP')
+        minFAP = config.getfloat('idq', 'minFAP')
+
+        startDelay  = config.getfloat('idq', 'start delay')
+        startJitter = config.getfloat('idq', 'start jitter')
+        startProb   = conifg.getfloat('idq', 'start prob')
+
+        tablesDelay  = config.getfloat('idq', 'tables delay')
+        tablesJitter = config.getfloat('idq', 'tables jitter')
+        tablesProb   = config.getfloat('idq', 'tables prob')
+
+        fapDelay  = config.getfloat('idq', 'fap delay')
+        fapJitter = config.getfloat('idq', 'fap jitter')
+        fapProb   = config.getfloat('idq', 'fap prob')
+
+        gwfDelay  = config.getfloat('idq', 'gwf delay')
+        gwfJitter = config.getfloat('idq', 'gwf jitter')
+        gwfProb   = config.getfloat('idq', 'gwf prob')
+
+        timeseriesDelay  = config.getfloat('idq', 'timeseries delay')
+        timeseriesJitter = config.getfloat('idq', 'timeseries jitter')
+        timeseriesProb   = config.getfloat('idq', 'timeseries prob')
+
+        activeChanDelay  = config.getfloat('idq', 'activeChan delay')
+        activeChanJitter = config.getfloat('idq', 'activeChan jitter')
+        activeChanProb   = config.getfloat('idq', 'activeChan prob')
+
+        calibDelay  = config.getfloat('idq', 'calib delay')
+        calibJitter = config.getfloat('idq', 'calib jitter')
+        calibProb   = config.getfloat('idq', 'calib prob')
+
+        rocDelay  = config.getfloat('idq', 'roc delay')
+        rocJitter = config.getfloat('idq', 'roc jitter')
+        rocProb   = config.getfloat('idq', 'roc prob')
+
+        statsDelay  = config.getfloat('idq', 'stats delay')
+        statsJitter = config.getfloat('idq', 'stats jitter')
+        statsProb   = config.getfloat('idq', 'stats prob')
+
+        idq = dq.IDQ( graceDBevent,
+                      instruments, 
+                      classifiers,
+                      gps-pad_left,
+                      pad_left+pad_right,
+                      maxFAP           = maxFAP,
+                      minFAP           = minFAP,
+                      gdb_url          = gdb_url,
+                      startDelay       = startDelay,
+                      startJitter      = startJitter,
+                      startProb        = startProb,
+                      tablesDelay      = tablesDelay,
+                      tablesJitter     = tablesJitter,
+                      tablesProb       = tablesProb,
+                      fapDelay         = fapDelay,
+                      fapJitter        = fapJitter,
+                      fapProb          = fapProb,
+                      gwfDelay         = gwfDelay,
+                      gwfJitter        = gwfJitter,
+                      gwfProb          = gwfProb,
+                      timeseriesDelay  = timeseriesDelay,
+                      timeseriesJitter = timeseriesJitter,
+                      timeseriesProb   = timeseriesProb,
+                      activeChanDelay  = activeChanDelay,
+                      activeChanJitter = activeChanJitter,
+                      activeChanProb   = activeChanProb,
+                      calibDelay       = calibDelay,
+                      calibJitter      = calibJitter,
+                      calibProb        = calibProb,
+                      rocDelay         = rocDelay,
+                      rocJitter        = rocJitter,
+                      rocProb          = rocProb,
+                      statsDelay       = statsDelay,
+                      statsJitter      = statsJitter,
+                      statsProb        = statsProb,
+                    )
+
+        sched += idq.genSchedule(directory=directory)
 
     # segDB2grcDB
     if config.has_section('segDB2grcDB'):

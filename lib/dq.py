@@ -57,6 +57,8 @@ class IDQ():
                  graceDBevent, 
                  instruments,
                  classifiers,
+                 start, 
+                 dur,
                  maxFAP = 1.0,
                  minFAP = 1e-5,
                  gdb_url = 'https://gracedb.ligo.org/api/',
@@ -99,6 +101,10 @@ class IDQ():
         self.minFAP = minFAP
         self.maxFAP = maxFAP
 
+        self.start = start
+        self.dur   = dur
+        self.stop  = start+dur
+
         self.startDelay  = startDelay
         self.startJitter = startJitter
         self.startProb   = startProb
@@ -136,33 +142,94 @@ class IDQ():
         self.statsProb   = statsProb
 
     def gentablesFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_idq_%s-%d-%d.xml.gz"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        filename = "%s/%s_idq_%s-%d-%d.xml.gz"%(dirname, instrument, classifier, self.start, self.dur)
+        open(filename,'w').close()
+
+        return filename
 
     def genFAPFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s-%d-%d.json"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        filename = "%s/%s_%s-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(filename,'w').close()
+
+        return filename
 
     def genGWFFilenames(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_idq_%s_fap-%d-%d.gwf"%(ifo, classifier, start, dur)
-        raise NotImplementedError, "%s_idq_%s_rank-%d-%d.gwf"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        fapfilename = "%s/%s_idq_%s_fap-%d-%d.gwf"%(dirname, instrument, classifier, self.start, self.dur)
+        open(fapfilename,'w').close()
+        rnkfilename = "%s/%s_idq_%s_rank-%d-%d.gwf"%(dirname, instrument, classifier, self.start, self.dur)
+        open(rnkfilename,'w').close()
+
+        return fapfilename, rnkfilename
 
     def genTimeseriesFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s_timeseries-%d-%d.png"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        filename = "%s/%s_%s_timeseries-%d-%d.png"%(dirname, instrument, classifier, self.start, self.dur)
+        open(filename,'w').close()
+
+        return filename
 
     def genActiveChanFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s_chanlist-%d-%d.json"%(ifo, classifier, start, dur)
-        raise NotImplementedError, "%s_%s_chanstrip-%d-%d.png"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        jsonFilename = "%s/%s_%s_chanlist-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(jsonFilename,'w').close()
+        pngFilename = "%s/%s_%s_chanstrip-%d-%d.png"%(dirname, instrument, classifier, self.start, self.dur)
+        open(pngFilename,'w').close()
+
+        return jsonFilename, pngFilename
 
     def genCalibFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s_calib-%d-%d.json"%(ifo, classifier, start, dur)
-        raise NotImplementedError, "%s_%s_calib-%d-%d.png"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        jsonFilename = "%s/%s_%s_calib-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(jsonFilename,'w').close()
+        pngFilename = "%s/%s_%s_calib-%d-%d.png"%(dirname, instrument, classifier, self.start, self.dur)
+        open(pngFilename,'w').close()
+
+        return jsonFilename, pngFilename
 
     def genROCFilename(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s_ROC-%d-%d.json"%(ifo, classifier, start, dur)
-        raise NotImplementedError, "%s_%s_ROC-%d-%d.png"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        jsonFilename = "%s/%s_%s_ROC-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(jsonFilename,'w').close()
+        pngFilename = "%s/%s_%s_ROC-%d-%d.png"%(dirname, instrument, classifier, self.start, self.dur)
+        open(pngFilename,'w').close()
+
+        return jsonFilename, pngFilename
 
     def genStatsFilenames(self, instrument, classifier, directory='.'):
-        raise NotImplementedError, "%s_%s_calibStats-%d-%d.json"%(ifo, classifier, start, dur)
-        raise NotImplementedError, "%s_%s_trainStats-%d-%d.json"%(ifo, classifier, start, dur)
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        jsonFilename = "%s/%s_%s_calibStats-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(jsonFilename,'w').close()
+        pngFilename = "%s/%s_%s_trainStats-%d-%d.json"%(dirname, instrument, classifier, self.start, self.dur)
+        open(pngFilename,'w').close()
+
+        return jsonFilename, pngFilename
 
     def drawFAP(self):
         '''
@@ -179,13 +246,13 @@ class IDQ():
         for instrument in self.instruments:
             if random.random() < self.startProb:
                 dt = max(0, random.normalvariate(self.startDelay, startJitter))
-                message = 'Started Searching for iDQ information within [-, -] at %s'%instrument
+                message = 'Started Searching for iDQ information within [%d, %d] at %s'%(self.start, self.stop, instrument)
                 sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
             
                 for classifier in self.classifiers:
                     if random.random() < self.startProb:
                         dt = max(0, random.normalvariate(self.startDelay, startJitter))
-                        message = 'Started Searching for iDQ information within [-, -] at %s'%instrument
+                        message = 'Started Searching for iDQ information within [%d, %d] at %s'%(self.start, self.stop, instrument)
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
                     else:
                         break
@@ -201,7 +268,7 @@ class IDQ():
                     if random.random() < self.fapProb:
                         dt += max(0, random.normalvariate(self.fapDelay, self.fapJitter))
                         fap = self.drawFAP()
-                        message = 'minimum glitch-FAP for %s at %s within [-, -] is %.6f'%(classifier, instrument, fap)
+                        message = 'minimum glitch-FAP for %s at %s within [%d, %d] is %.6f'%(classifier, instrument, self.start, self.stop, fap)
                         filename = self.genFAPFilename(instrument, classifier, directory=directory)
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, filename=filename, gdb_url=self.gdb_url ) )
                     else:
@@ -209,8 +276,8 @@ class IDQ():
 
                     if random.random() < self.gwfProb:
                         dt += max(0, random.normalvariate(self.gwfDelay, self.gwfJitter))
-                        fapMessage = 'iDQ fap timesereis for %s at %s within [-, -] :'%(classifier, instrument)
-                        rnkMessage = 'iDQ glitch-rank frame for %s at %s within [-, -] :'%(classifier, instrument)
+                        fapMessage = 'iDQ fap timesereis for %s at %s within [%d, %d] :'%(classifier, instrument, self.start, self.stop)
+                        rnkMessage = 'iDQ glitch-rank frame for %s at %s within [%d, %d] :'%(classifier, instrument, self.start, self.stop)
                         fapGWF, rnkGWF  = self.genGWFFilenames(instrument, classifier, directory=directory)
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, fapMessage, filename=fapGWF, gdb_url=self.gdb_url ) )
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, rnkMessage, filename=rnkGWF, gdb_url=self.gdb_url ) )
@@ -268,7 +335,7 @@ class IDQ():
                         break
 
                 else: ### we made it all the way through! add finish statement
-                    message = 'Finished searching for iDQ information within [-, -] at %s'%(instrument)
+                    message = 'Finished searching for iDQ information within [%d, %d] at %s'%(instrument, self.start, self.stop)
                     sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
         return sched
