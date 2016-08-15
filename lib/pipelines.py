@@ -246,10 +246,31 @@ class CBCPipeline(Pipeline):
 
         ### just generate CoincInspiralTable?
         ### don't worry about process params table, SingleInspiralTable, CoincMapTable, CoincTable
+        ### will almost certainly need SingleInspiralTable for Bayestar to work...
+        coinc = lsctables.CoincInspiralTable()
 
-        raise NotImplementedError
+        row = lsctables.CoincInspiral()
+
+        snrs = self.drawSNRs()
+        m1, m2 = self.drawMasses()
+
+        row.coinc_event_id   = coinc.gen_next_id()
+        row.ifos             = ",".join(self.instruments) 
+        row.end_time         = int(self.gps) 
+        row.end_time_ns      = 1e9*(self.gps - row.end_time)
+        row.mass             = m1+m2
+        row.mchirp           = (m1*m2)**0.6/row.mass**0.2
+        row.minimum_duration = 64,
+        row.snr              = snrs['Network']
+        row.false_alarm_rate = self.far
+        row.combined_far     = self.far
+
+        coinc.append( row )
 
         return xmldoc
+
+    def drawMasses(self):
+        return random.normalvariate(1.4, 0.1), random.normalvariate(1.4,0.1)
 
     def genPSDXMLdoc(self):
         xmldoc = ligolw.Document()
@@ -258,8 +279,7 @@ class CBCPipeline(Pipeline):
 
         ### generate this from an analytic formula...
         ###   or draw the actual values from analytic formula using chi2 distribution?
-
-        raise NotImplementedError
+#        raise NotImplementedError
 
         return xmldoc
 
@@ -328,8 +348,7 @@ class GSTLAL(CBCPipeline):
         xmldoc.appendChild( xml_element )
 
         ### just upload an empty xml for now?
-
-        raise NotImplementedError
+#        raise NotImplementedError
 
         return xmldoc
 
@@ -369,8 +388,7 @@ class MBTAOnline(CBCPipeline):
             raise ValueError('could not find "strain spectral densities" message')
 
         ### just skip these for now?
-
-        raise NotImplementedError('write MBTA\'s "ITF triggers" plots and "Matched filter outputs" plot')
+#        raise NotImplementedError('write MBTA\'s "ITF triggers" plots and "Matched filter outputs" plot')
 
         return coincFilename, ancilliary
 
