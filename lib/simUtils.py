@@ -86,7 +86,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
                                     requestJitter        = requestJitter, 
                                     respondTimeout       = site_respondDelay, 
                                     respondJitter        = site_respondJitter, 
-                                    respondProb          = site_respondProb
+                                    respondProb          = site_respondProb,
                                     respondProbOfSuccess = site_successProb, 
                                   )
                 sched += site.genSchedule(request=request, respond=respond)
@@ -113,27 +113,204 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
         raise NotImplementedError('segDB2grcDB cannot be simulated')
 
     ### add schedule for pe
+    if config.has_section('plot skymaps'):
+        plotDelay  = config.getfloat('plot skymaps', 'plotSkymap delay')
+        plotJitter = config.getfloat('plot skymaps', 'plotSkymap jitter')
+        plotProb   = config.getfloat('plot skymaps', 'plotSkymap prob')
+    else:
+        plotDelay  = 0.0
+        plotJitter = 0.0
+        plotProb   = 0.0
+
+    if config.has_section('skyviewer'):
+        skyviewerDelay  = config.getfloat('skyviewer', 'skyviewer delay')
+        skyviewerJitter = config.getfloat('skyviewer', 'skyviewer jitter')
+        skyviewerProb   = config.getfloat('skyviewer', 'skyviewer prob')
+    else:
+        skyviewerDelay  = 0.0
+        skyviewerJitter = 0.0
+        skyviewerProb   = 0.0
+
     # bayestar
     if config.has_section('bayestar'):
-        raise NotImplementedError()
-        ### look for a WriteLog action in sched with os.path.basename(filename)=="psd.xml.gz"
-        ### bump all bayestar actions so they start after that has been uploaded
+
+        raise NotImplementedError('look for a WriteLog action in sched with os.path.basename(filename)=="psd.xml.gz"\nbump all bayestar actions so they start after that has been uploaded')
+
+        lvem        = config.getboolean('bayestar', 'lvem')
+
+        startDelay  = config.getfloat('bayestar', 'start delay')
+        startJitter = config.getfloat('bayestar', 'start jitter')
+        startProb   = config.getfloat('bayestar', 'start prob')
+
+        finishDelay  = config.getfloat('bayestar', 'finish delay')
+        finishJitter = config.getfloat('bayestar', 'finish jitter')
+        finishProb   = config.getfloat('bayestar', 'finish prob')
+
+        skymapDelay  = config.getfloat('bayestar', 'skymap delay')
+        skymapJitter = config.getfloat('bayestar', 'skymap jitter')
+        skymapProb   = config.getfloat('bayestar', 'skymap prob')
+
+        bayestar = pe.Bayestar( graceDBevent,
+                                gdb_url           = gdb_url,
+                                startTimeout      = startDelay, 
+                                startJitter       = startJitter, 
+                                startProb         = startProb, 
+                                skymapTimeout     = skymapDelay, 
+                                skymapJitter      = skymapJitter, 
+                                skymapProb        = skymapProb, 
+                                finishTimeout     = finishDelay, 
+                                finishJitter      = finishJitter, 
+                                finishProb        = finishProb, 
+                                plotSkymapTimeout = plotDelay, 
+                                plotSkymapJitter  = plotJitter, 
+                                plotSkymapProb    = plotProb, 
+                                skyviewerTimeout  = plotDelay, 
+                                skyviewerJitter   = plotJitter, 
+                                skyviewerProb     = plotProb
+                              )
+
+        sched += bayestar.genSchedule(directory=directory, lvem=lvem)
 
     # lalinference
     if config.has_section('lalinference'):
-        raise NotImplementedError()
+        lvem        = config.getboolean('lalinference', 'lvem')
+
+        startDelay  = config.getfloat('lalinference', 'start delay')
+        startJitter = config.getfloat('lalinference', 'start jitter')
+        startProb   = config.getfloat('lalinference', 'start prob')
+        
+        finishDelay  = config.getfloat('lalinference', 'finish delay')
+        finishJitter = config.getfloat('lalinference', 'finish jitter')
+        finishProb   = config.getfloat('lalinference', 'finish prob')
+
+        skymapDelay  = config.getfloat('lalinference', 'skymap delay')
+        skymapJitter = config.getfloat('lalinference', 'skymap jitter')
+        skymapProb   = config.getfloat('lalinference', 'skymap prob')
+
+        lalinf = pe.LALInference( graceDBevent,
+                                  gdb_url           = gdb_url,
+                                  startTimeout      = startDelay,
+                                  startJitter       = startJitter,
+                                  startProb         = startProb,
+                                  skymapTimeout     = skymapDelay,
+                                  skymapJitter      = skymapJitter,
+                                  skymapProb        = skymapProb,
+                                  finishTimeout     = finishDelay,
+                                  finishJitter      = finishJitter,
+                                  finishProb        = finishProb,
+                                  plotSkymapTimeout = plotDelay,
+                                  plotSkymapJitter  = plotJitter,
+                                  plotSkymapProb    = plotProb,
+                                  skyviewerTimeout  = plotDelay,
+                                  skyviewerJitter   = plotJitter,
+                                  skyviewerProb     = plotProb
+                                )
+
+        sched += lalinf.genSchedule(directory=directory, lvem=lvem)
 
     # lib
     if config.has_section('lib'):
-        raise NotImplementedError()
+        lvem        = config.getboolean('lalinference', 'lvem')
+
+        startDelay  = config.getfloat('lib', 'start delay')
+        startJitter = config.getfloat('lib', 'start jitter')
+        startProb   = config.getfloat('lib', 'start prob')
+        
+        finishDelay  = config.getfloat('lib', 'finish delay')
+        finishJitter = config.getfloat('lib', 'finish jitter')
+        finishProb   = config.getfloat('lib', 'finish prob')
+
+        skymapDelay  = config.getfloat('lib', 'skymap delay')
+        skymapJitter = config.getfloat('lib', 'skymap jitter')
+        skymapProb   = config.getfloat('lib', 'skymap prob')
+
+        lib = pe.LIB( graceDBevent,
+                      gdb_url           = gdb_url,
+                      startTimeout      = startDelay,
+                      startJitter       = startJitter,
+                      startProb         = startProb,
+                      skymapTimeout     = skymapDelay,
+                      skymapJitter      = skymapJitter,
+                      skymapProb        = skymapProb,
+                      finishTimeout     = finishDelay,
+                      finishJitter      = finishJitter,
+                      finishProb        = finishProb,
+                      plotSkymapTimeout = plotDelay,
+                      plotSkymapJitter  = plotJitter,
+                      plotSkymapProb    = plotProb,
+                      skyviewerTimeout  = plotDelay,
+                      skyviewerJitter   = plotJitter,
+                      skyviewerProb     = plotProb
+                    )
+
+        sched += lib.genSchedule(directory=directory, lvem=lvem)
 
     # bayeswave
     if config.has_section('bayeswave'):
-        raise NotImplementedError()
+        lvem        = config.getboolean('lalinference', 'lvem')
+
+        startDelay  = config.getfloat('bayeswave', 'start delay')
+        startJitter = config.getfloat('bayeswave', 'start jitter')
+        startProb   = config.getfloat('bayeswave', 'start prob')
+        
+        finishDelay  = config.getfloat('bayeswave', 'finish delay')
+        finishJitter = config.getfloat('bayeswave', 'finish jitter')
+        finishProb   = config.getfloat('bayeswave', 'finish prob')
+
+        skymapDelay  = config.getfloat('bayeswave', 'skymap delay')
+        skymapJitter = config.getfloat('bayeswave', 'skymap jitter')
+        skymapProb   = config.getfloat('bayeswave', 'skymap prob')
+
+        bayeswave = pe.Bayeswave( graceDBevent,
+                                 gdb_url           = gdb_url,
+                                 startTimeout      = startDelay,
+                                 startJitter       = startJitter,
+                                 startProb         = startProb,
+                                 skymapTimeout     = skymapDelay,
+                                 skymapJitter      = skymapJitter,
+                                 skymapProb        = skymapProb,
+                                 finishTimeout     = finishDelay,
+                                 finishJitter      = finishJitter,
+                                 finishProb        = finishProb,
+                                 plotSkymapTimeout = plotDelay,
+                                 plotSkymapJitter  = plotJitter,
+                                 plotSkymapProb    = plotProb,
+                                 skyviewerTimeout  = plotDelay,
+                                 skyviewerJitter   = plotJitter,
+                                 skyviewerProb     = plotProb
+                               )
+
+        sched += bayeswave.genSchedule(directory=directory, lvem=lvem)
 
     # cwbPE
     if config.has_section('cwbPE'):
-        raise NotImplementedError()
+        lvem        = config.getboolean('lalinference', 'lvem')
+
+        finishDelay  = config.getfloat('cwbPE', 'finish delay')
+        finishJitter = config.getfloat('cwbPE', 'finish jitter')
+        finishProb   = config.getfloat('cwbPE', 'finish prob')
+
+        skymapDelay  = config.getfloat('cwbPE', 'skymap delay')
+        skymapJitter = config.getfloat('cwbPE', 'skymap jitter')
+        skymapProb   = config.getfloat('cwbPE', 'skymap prob')
+
+        cwbpe = pe.CoherentWaveBurst( graceDBevent,
+                                      gdb_url           = gdb_url,
+                                      skymapTimeout     = skymapDelay,
+                                      skymapJitter      = skymapJitter,
+                                      skymapProb        = skymapProb,
+                                      finishTimeout     = finishDelay,
+                                      finishJitter      = finishJitter,
+                                      finishProb        = finishProb,
+                                      plotSkymapTimeout = plotDelay,
+                                      plotSkymapJitter  = plotJitter,
+                                      plotSkymapProb    = plotProb,
+                                      skyviewerTimeout  = plotDelay,
+                                      skyviewerJitter   = plotJitter,
+                                      skyviewerProb     = plotProb
+                                    )
+
+        sched += cwbpe.genSchedule(directory=directory, lvem=lvem)
 
     ### add schedule for misc stuff
     # external triggers
