@@ -110,7 +110,30 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
     # segDB2grcDB
     if config.has_section('segDB2grcDB'):
-        raise NotImplementedError('segDB2grcDB cannot be simulated')
+        startDelay  = config.getfloat('segDB2grcDB', 'start delay')
+        startJitter = config.getfloat('segDB2grcDB', 'start jitter')
+        startProb   = config.getfloat('segDB2grcDB', 'start prob')
+
+        flags = []
+        for flag in config.get('segDB2grcDB', 'flags').split():
+            if not config.has_section(flag):
+                raise ValueError('could not find section for segDB flag=%s')
+
+            delay  = config.getfloat(flag, 'delay')
+            jitter = config.getfloat(flag, 'jitter')
+            prob   = config.getfloat(flag, 'prob')
+            win    = config.getfloat(flag, 'win')
+            flags.append( (flag, (delay, jitter, prob), (gps-win, 2*win)) )
+        
+        segDB = dq.SegDB2GrcDB( graceDBevent, 
+                                flags       = flags,
+                                gdb_url     = gdb_url,
+                                startDelay  = startDelay, 
+                                startJitter = startJitter, 
+                                startProb   = startProb,
+                              )
+
+        sched += segDB.generateSchedule(directory=directory)
 
     ### add schedule for pe
     if config.has_section('plot skymaps'):
@@ -133,9 +156,6 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
     # bayestar
     if config.has_section('bayestar'):
-
-        raise NotImplementedError('look for a WriteLog action in sched with os.path.basename(filename)=="psd.xml.gz"\nbump all bayestar actions so they start after that has been uploaded')
-
         lvem        = config.getboolean('bayestar', 'lvem')
 
         startDelay  = config.getfloat('bayestar', 'start delay')
@@ -169,7 +189,16 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
                                 skyviewerProb     = plotProb
                               )
 
-        sched += bayestar.genSchedule(directory=directory, lvem=lvem)
+        agenda = bayestar.genSchedule(directory=directory, lvem=lvem)
+
+        for action in sched:
+            if isinstance(action, schedule.WriteLog):
+                if os.path.basename(action.filename) == "psd.xml.gz":
+                    agenda.bump( action.dt )
+                    sched += agenda ### only add Bayestar stuff if we plan to upload a psd.xml.gz
+                    break
+        else: ### could not find trigger for Bayestar process...
+            pass
 
     # lalinference
     if config.has_section('lalinference'):

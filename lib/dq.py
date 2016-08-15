@@ -9,23 +9,63 @@ import schedule
 
 #-------------------------------------------------
 
-'''
-generate a different object for each follow-up. These may inherit from a single parent object, but they each should be able to produce data that would be uploaded to GraceDB
-'''
+class SegDB2GrcDB():
+    def __init__(self, graceDBevent, flags=[], startDelay=10, startJitter=1, startProb=1.0, gdb_url='https://gracedb.ligo.org/api/'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url      = gdb_url
+
+        self.startDelay  = startDelay
+        self.startJitter = startJitter
+        self.startProb   = startProb
+
+        self.flags = flags
+
+    def genFilename(self, flag, start, dur, directory='.'):
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        filename = "%s/%s-%d-%d.xml"%(dirname, flag.replace(":","_"), start, dur)
+        open(filename, 'w').close() ### may want to do more than this...
+        return filename
+
+    def genSchedule(self, directory='.')
+        '''
+        generate a schedule for SegDB2GraceDB uploads
+        '''
+        sched = schedule.Schedule()
+        if random.random() < self.startProb:
+            start_dt = max(0, random.normalvariate(self.startDelay, self.startJitter))
+            message = 'began searching for segments in : fakeSegDB'
+            sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
+
+            for flag, (delay, jitter, prob), (start, dur) in flags:
+                if random.random() < prob:
+                    filename = self.genFilename( flag, start, dur, directory=directory )
+                    start_time += max(0, random.normalvariate(delay, jitter))
+                    sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, flag, filename=filename, gdb_url=self.gdb_url ) )
+                else:
+                    break ### process failed, so we stop
+
+            sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, 'finished searching for segments in : fakeSegDB', gdb_url=self.gdb_url ) )
+
+        return sched
 
 class IDQ():
     def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
         self.graceDBevent = graceDBevent
         self.gdb_url      = gdb_url
 
+    def genSchedule(self, directory='.'):
         raise NotImplementedError
 
-class segDB2grcDB():
-    def __init__(self, graceDBevent, gdb_url='https://gracedb.ligo.org/api/'):
-        self.graceDBevent = graceDBevent
-        self.gdb_url      = gdb_url
 
-        raise NotImplementedError
+
+
+
+
+
+
+
 
 '''
 def idq(gps, graceid, options):
@@ -122,25 +162,6 @@ def idq(gps, graceid, options):
 
             dt = float(options['finish dt'])
             schedule.append( (gps+dt, 'Finished searching for iDQ information within [%d, %d] at %s'%(start, end, ifo), None, None) )
-
-    return schedule
-
-def segDB2grcDB(gps, graceid, options):
-    schedule = []
-    if np.random.rand() <= float(options['prob of success']):
-        dt = float(options['start dt'])
-        schedule.append( (gps+dt, 'began searching for segments in : fakeDB', None, None) )
-
-        dt = float(options['flags dt'])
-        start = int(gps)-30
-        dur = 60
-        for flags in options['flags'].split():
-            filename = "%s-%d-%d.xml"%(flag.replace(":","_"), start, dur)
-            touch( filename )
-            schedule.append( (gps+dt, flag, filename, None) )
-
-        dt = float(options['finish dt'])
-        schedule.append( (gps+dt, 'finished searching for segments in : fakeDB', None, None) )
 
     return schedule
 '''
