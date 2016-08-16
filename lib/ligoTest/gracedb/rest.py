@@ -60,7 +60,7 @@ class FakeDb():
         self.lvalert = os.path.join(directory, 'lvalert.out') ### file into which we write lvalert messages
 
     def sendlvalert(self, message ):
-        file_obj = open(self.lvalert, 'w')
+        file_obj = open(self.lvalert, 'a')
         print >> file_obj, message
         file_obj.close()
 
@@ -374,12 +374,13 @@ class FakeDb():
 
     def logs(self, graceid):
         logs = self.__extract__( self.__logsPath__(graceid) )
+        logsPath = self.__logsPath__(graceid)
         return FakeTTPResponse( {'numRows':len(logs),
                                  'start':0,
                                  'log': logs,
-                                 'links':{'self':self.__logPath__(graceid),
-                                          'first':self.__logPath__(graceid),
-                                          'last':self.__logPath__(graceid), 
+                                 'links':{'self'  : logsPath,
+                                          'first' : logsPath,
+                                          'last'  : logsPath, 
                                          },
                                 }
                               )

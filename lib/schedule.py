@@ -8,6 +8,20 @@ import time
 import json
 
 from ligo.gracedb.rest import GraceDb
+from ligoTest.gracedb.rest import FakeDb
+
+#-------------------------------------------------
+
+def initGraceDb(url):
+    '''
+    a method that decides whether we want an actual instance of GraceDb or an instance of FakeDb based on the url
+    currently, that's done by requring 'http' to be the begining of the url for real GraceDb instances. 
+    Otherwise we try to set up FakeDb, in which case we expect url to be a path.
+    '''
+    if 'http' == url[:4]:
+        return GraceDb(url)
+    else:
+        return FakeDb(url) ### expects url to be a path
 
 #-------------------------------------------------
 
@@ -50,7 +64,7 @@ class Action(object):
     def __str__(self):
         return """Action
     timeout : %.3f
-    expiration : %.3f"""%(self.dt, self.expiration)
+    expiration : %s"""%(self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def setExpiration(self, t0):
         self.expiration = t0+self.dt
@@ -68,7 +82,7 @@ class Action(object):
         time.sleep( wait )
 
     def execute(self):
-        self.foo( *self.args, **self.kwargs )
+        return self.foo( *self.args, **self.kwargs )
 
 class Schedule(object):
     '''
@@ -147,17 +161,17 @@ class CreateEvent(Action):
     search     : %s
     filename   : %s
     timeout    : %.3f
-    expiration : %.3f"""%(self.gdb_url, self.group, self.pipeline, self.search, self.filename, self.dt, self.expiration)
+    expiration : %s"""%(self.gdb_url, self.group, self.pipeline, self.search, self.filename, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def createEvent(self, *args, **kwargs):
         '''
         creates the entry in the database and updates self.graceDBevent.graceid so that other Actions know which graceid was assigned
         '''
-        gdb = GraceDb(self.gdb_url)
+        gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
         httpResponse = gdb.createEvent( self.group, self.pipeline, self.filename, search=self.search )
         httpString = httpResponse.read()
-#        print httpString
         self.graceDBevent.set_graceid( json.loads( httpString )['graceid'] ) 
+        return httpResponse
 
 class WriteLabel(Action):
     '''
@@ -176,12 +190,12 @@ class WriteLabel(Action):
     graceid    : %s
     label      : %s
     timeout    : %.3f
-    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, self.expiration)
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def writeLabel(self, *args, **kwargs):
-        gdb = GraceDb(self.gdb_url)
+        gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
         httpResponse = gdb.writeLabel( self.graceDBevent.get_graceid(), self.label )
-#        print httpResponse.read()
+        return httpResponse
 
 class RemoveLabel(Action):
     '''
@@ -200,12 +214,12 @@ class RemoveLabel(Action):
     graceid    : %s
     label      : %s
     timeout    : %.3f
-    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, self.expiration)
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def removeLabel(self, *args, **kwargs):
-        gdb = GraceDb(self.gdb_url)
+        gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
         httpResponse = gdb.removeLabel( self.graceDBevent.get_graceid(), self.label )
-#        print httpResponse.read()
+        return httpResponse
 
 class WriteLog(Action):
     '''
@@ -228,9 +242,36 @@ class WriteLog(Action):
     filename   : %s
     tagname    : %s
     timeout    : %.3f
-    expiration : %.3f"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.message, self.filename, self.tagname, self.dt, self.expiration)
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.message, self.filename, self.tagname, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def writeLog(self, *args, **kwargs):
-        gdb = GraceDb(self.gdb_url)
+        gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
         httpResponse = gdb.writeLog( self.graceDBevent.get_graceid(), self.message, filename=self.filename, tagname=self.tagname )
-#        print httpResponse.read()
+        return httpResponse
+
+class WriteFile(Action):
+    '''
+    write a file. 
+    DEPRECATED in favor of WriteLog
+    '''
+    def __init__(self, dt, graceDBevent, filename, gdb_url='https://gracedb.ligo.org/api'):
+        self.graceDBevent = graceDBevent
+        self.gdb_url = gdb_url
+
+        self.filename = filename
+
+        super(WriteFile, self).__init__(dt, self.writeFile)
+
+    def __str__(self):
+        return """WriteFile -> %s
+    graceid    : %s
+    filename   : %s
+    timeout    : %.3f
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.filename, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+
+    def writeFile(self, *args, **kwargs):
+        gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
+        httpResponse = gdb.writeFile( self.graceDBevent.get_graceid(), filename=self.filename )
+        return httpResponse
+
+

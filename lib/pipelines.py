@@ -17,6 +17,7 @@ from glue.ligolw import ligolw
 from glue.ligolw import utils as ligolw_utils
 from glue.ligolw import lsctables
 from glue.ligolw import table
+from glue.ligolw import ilwd
 
 import lal
 from lal import series
@@ -282,16 +283,15 @@ class CBCPipeline(Pipeline):
         xmldoc.appendChild( xml_element )
 
         ### generate CoincInspiralTable?
-        coinc = lsctables.CoincInspiralTable()
+        coinc = lsctables.New( lsctables.CoincInspiralTable, columns=['coinc_event_id', 'ifos', 'end_time', 'end_time_ns', 'mass', 'mchirp', 'minimum_duration', 'snr', 'false_alarm_rate', 'combined_far'] )
         xml_element.appendChild( coinc )
-        coinc.set_next_id(0)
 
         snrs = self.drawSNRs()
         m1, m2 = self.drawMasses()
 
         row = lsctables.CoincInspiral()
 
-        row.coinc_event_id   = coinc.get_next_id()
+        row.coinc_event_id   = ilwd.coinc_event_coinc_event_id_class(0) ### this is probably fragile...
         row.ifos             = ",".join(self.instruments) 
         row.end_time         = int(self.gps) 
         row.end_time_ns      = 1e9*(self.gps - row.end_time)
@@ -305,8 +305,8 @@ class CBCPipeline(Pipeline):
         coinc.append( row )
 
         ### add in a SingleInspiralTable
-#        snglInsp = lsctables.SnglInspiralTable()
-#        xml_element.appendChild( snglInsp )
+        snglInsp = lsctables.New( lsctables.SnglInspiralTable, columns=[] )
+        xml_element.appendChild( snglInsp )
 
         ### FIXME: need to actually fill in SingleInspiralTable
         ### then consider hooking this up via CoincMap and CoincTable elements
@@ -344,11 +344,11 @@ class CBCPipeline(Pipeline):
                   'End Time': row.end_time + 1e-9*row.end_time_ns,
                   'SNR'     : row.snr,
                   'IFOs'    : row.ifos,
-                  'FAR'     : row.far_alarm_rate,
+                  'FAR'     : row.false_alarm_rate,
                  }
         return ans
 
-    def writeLogFile( logData, filename ):
+    def writeLogFile(self, logData, filename ):
         file_obj = open(filename, 'w')
         for key, val in logData.items():
             print >> file_obj, "%s : %s"%(key, val)
@@ -362,15 +362,16 @@ class CBCPipeline(Pipeline):
         ### generate filenames
         coincFilename, copyCoincFilename, psdFilename, logFilename = self.genFilename(directory=directory)
 
-        ### generate data
+        ### generate data and write them
         coincXMLdoc = self.genCoincXMLdoc()
-        psdXMLdoc   = self.genPSDXMLdoc()
-        logData     = self.genLog(coincXMLdoc)
-
-        ### write files
         ligolw_utils.write_filename( coincXMLdoc, coincFilename, gz=coincFilename.endswith('.gz') )
+        shutil.copy(coincFilename, copyCoincFilename)
+
+        psdXMLdoc   = self.genPSDXMLdoc()
         ligolw_utils.write_filename( psdXMLdoc, psdFilename, gz=psdFilename.endswith('.gz') )
-        self.writeLog( logData, logFilename )
+
+        logData     = self.genLog(coincXMLdoc)
+        self.writeLogFile( logData, logFilename )
 
         shutil.copy( coincFilename, copyCoincFilename ) ### copy coincFilename -> copyCoincFilename
 
