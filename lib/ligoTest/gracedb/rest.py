@@ -39,6 +39,11 @@ class FakeTTPResponse():
     def json(self):
         return json.loads( self.read() )
 
+class FakeTTPError(Exception):
+    """
+    a "fake" httpError
+    """
+
 #-------------------------------------------------
 
 class FakeDb():
