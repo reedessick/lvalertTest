@@ -60,16 +60,45 @@ class FakeDb():
                         'mdc'   : 'M',
                        }
 
+    __allowedGroupPipelineSearch__ = {'Test'  : {'CWB'          : ['AllSky', None],
+                                                 'LIB'          : ['AllSky', None],
+                                                 'pycbc'        : ['AllSky', None],
+                                                 'gstlal'       : ['LowMass', 'HighMass', None], 
+                                                 'gstlal-spiir' : ['LowMass', 'HighMass', None],
+                                                 'MBTAOnline'   : ['LowMass', 'HighMass', None],
+                                                },
+                                      'CBC'   : {'pycbc'        : ['AllSky', None],
+                                                 'gstlal'       : ['LowMass', 'HighMass', None], 
+                                                 'gstlal-spiir' : ['LowMass', 'HighMass', None],
+                                                 'MBTAOnline'   : ['LowMass', 'HighMass', None],
+                                                },
+                                      'Burst' : {'CWB'          : ['AllSky', None],
+                                                 'LIB'          : ['AllSky', None]
+                                                },
+                                     }
+
+    __allowedLabels__ = ['EM_Throttled',
+                         'EM_Selected', 'EM_Superseded', 
+                         'EM_READY', 
+                         'PE_READY', 
+                         'DQV', 
+                         'INJ', 
+                         'ADVREQ', 'ADVOK', 'ADVNO', 
+                         'H1OPS', 'H1OK', 'H1NO',
+                         'L1OPS', 'L1OK', 'L1NO',
+                        ]
+
+    ### basic instantiation ###
+
     def __init__(self, directory='.'):
         if not os.path.exists(directory):
             os.makedirs(directory)
         self.home = directory
         self.lvalert = os.path.join(directory, 'lvalert.out') ### file into which we write lvalert messages
 
-    def sendlvalert(self, message, node ):
-        '''
-        prints node|message pairs to self.lvalert
-        '''
+    ### write lvalert messages into a file ###
+
+    def sendlvalert(self, message ):
         file_obj = open(self.lvalert, 'a')
         print >> file_obj, lvutils.alert2line(node, message)
         file_obj.close()
@@ -82,6 +111,26 @@ class FakeDb():
 
         return "%s_%s_%s"%(event['group'], event['pipeline'], event['search']) if event.has_key('search') else "%s_%s"%(event['group'], event['pipeline'])
                 
+    ### conditionals on allowed actions ###
+
+    def check_group_pipeline_search(self, group, pipeline, search):
+        if not self.__allowedGroupPipelineSearch__.has_key(group):
+            raise FakeTTPError('bad group : %s'%group)
+
+        if not self.__allowedGroupPipelineSearch__[group].has_key(pipeline):
+            raise FakeTTPError('bad group, pipeline : %s, %s'%(group, pipeline))
+
+        if search not in self.__allowedGroupPipelineSearch__[group][pipeline]:
+            raise FakeTTPError('bad group, pipeline, search : %s, %s, %s'%(group, pipeline, search))
+
+    def check_label(self, label):
+        if label not in self.__allowedLabels__:
+            raise FakeTTPError('label=%s not allowed'%label)
+
+    def check_graceid(self, graceid):
+        if not os.path.exists(self.__directory__(graceid)):
+            raise FakeTTPError('could not find graceid=%s'%graceid)
+
     ### generic utils and data management ###
 
     def __genGraceID__(self, group):
@@ -100,7 +149,7 @@ class FakeDb():
             
     def __directory__(self, graceid):
         '''
-        checks to see whether this graceid exists
+        generates the directory associated with this graceid
         '''
         return os.path.join(self.home, graceid)
 
@@ -278,6 +327,8 @@ class FakeDb():
 
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
+        self.check_group_pipeline_search( group, pipeline, search )
+
         group    = group.lower()
         pipeline = pipeline.lower()
         if search: 
@@ -348,6 +399,7 @@ class FakeDb():
         return jsonD, lvalert
 
     def writeLog(self, graceid, message, filename=None, filecontents=None, tagname=[], displayName=None):
+        self.check_graceid(graceid)
 
         jsonD, lvalert = self.__log__(graceid, message, filename=filename, tagname=tagname )
 
@@ -355,6 +407,8 @@ class FakeDb():
         return FakeTTPResponse( jsonD )
  
     def writeFile(self, graceid, filename, filecontents=None):
+        self.check_graceid(graceid)
+
         return self.writeLog( graceid, '', filename=filename, filecontents=filecontents)
 
     def __label__(self, graceid, label ):
@@ -375,12 +429,17 @@ class FakeDb():
         return jsonD, lvalert
 
     def writeLabel(self, graceid, label):
+        self.check_graceid(graceid)
+        self.check_label( label )
+
         jsonD, lvalert = self.__label__( graceid, label )
 
         self.sendlvalert( lvalert, self.__node__(graceid) )
         return FakeTTPResponse( jsonD )
 
     def removeLabel(self, graceid, label):
+        self.check_graceid(graceid)
+
         raise NotImplementedError('this is not implemented in the real GraceDb, so we do not implement it here. At least, not yet.')
 
     ### queries ###
@@ -389,12 +448,16 @@ class FakeDb():
         raise NotImplementedError('not sure how to support query logic easily...')
 
     def event(self, graceid):
+        self.check_graceid(graceid)
+
         topLevel = self.__extract__( self.__topLevelPath__(graceid) )
         topLevel.update( {'labels':dict( (label['name'], label['self']) for label in self.__extract__( self.__labelsPath__(graceid) ) )} )
 
         return FakeTTPResponse( topLevel )
 
     def logs(self, graceid):
+        self.check_graceid(graceid)
+
         logs = self.__extract__( self.__logsPath__(graceid) )
         logsPath = self.__logsPath__(graceid)
         return FakeTTPResponse( {'numRows':len(logs),
@@ -408,6 +471,8 @@ class FakeDb():
                               )
 
     def labels(self, graceid, label=''):
+        self.check_graceid(graceid)
+
         return FakeTTPResponse( {'labels':self.__extract__( self.__labelsPath__(graceid) ),
                                  'links': [{'self':self.__labelsPath__(graceid),
                                            'event':self.__directory__(graceid),
@@ -417,4 +482,6 @@ class FakeDb():
                               )
 
     def files(self, graceid, filename=None, raw=False):
+        self.check_graceid(graceid)
+
         return FakeTTPResponse( dict( (os.path.basename(filename), filename) for filename in self.__extract__( self.__filesPath__(graceid) ) ) )
