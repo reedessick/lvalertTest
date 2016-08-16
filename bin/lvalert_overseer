@@ -1,0 +1,28 @@
+#!/usr/bin/python
+usage       = "lvalert_overseer [--options] fakeDB_directory"
+description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes them accordingly"
+author      = "reed.essick@ligo.org"
+
+#-------------------------------------------------
+
+from optparse import OptionParser
+
+#-------------------------------------------------
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v', '--verbose', default=False, action='store_true')
+
+opts, args = parser.parse_args()
+
+if len(args)!=1:
+    raise ValueError('please supply exactly one argument\n%s'%usage)
+fakeDB_dir = args[0]
+
+#-------------------------------------------------
+
+'''
+Set up a "listener" for changes to a file. 
+When the file is observed to change, we trigger a reading process that "pops" the new line(s) from the file.
+We then distribute that line through either bone fide lvalert_send, fork like we would for lvalert_listen, or push through multiprocessing connection like we would for lvalert_listenMP.
+'''

@@ -64,11 +64,22 @@ class FakeDb():
         self.home = directory
         self.lvalert = os.path.join(directory, 'lvalert.out') ### file into which we write lvalert messages
 
-    def sendlvalert(self, message ):
+    def sendlvalert(self, message, node ):
+        '''
+        prints node : message pairs to self.lvalert
+        '''
         file_obj = open(self.lvalert, 'a')
-        print >> file_obj, message
+        print >> file_obj, node, ":", message
         file_obj.close()
 
+    def __node__(self, graceid):
+        '''
+        figures out the node name given a graceid
+        '''
+        event = self.event(graceid).json() ### load in the parameters
+
+        return "%s_%s_%s"%(event['group'], event['pipeline'], event['search']) if event.has_key('search') else "%s_%s"%(event['group'], event['pipeline'])
+                
     ### generic utils and data management ###
 
     def __genGraceID__(self, group):
@@ -272,7 +283,7 @@ class FakeDb():
 
         ### write top level data
         jsonD, lvalert = self.__createEvent__( graceid, group, pipeline, filename, search=search )
-        self.sendlvalert( lvalert )
+        self.sendlvalert( lvalert, self.__node__(graceid) )
 
         ### write filename to local
         self.writeLog( graceid, 'initial data', filename=filename ) ### sends alert about log message
@@ -334,7 +345,7 @@ class FakeDb():
 
         jsonD, lvalert = self.__log__(graceid, message, filename=filename, tagname=tagname )
 
-        self.sendlvalert( lvalert )
+        self.sendlvalert( lvalert, self.__node__(graceid) )
         return FakeTTPResponse( jsonD )
  
     def writeFile(self, graceid, filename, filecontents=None):
@@ -360,7 +371,7 @@ class FakeDb():
     def writeLabel(self, graceid, label):
         jsonD, lvalert = self.__label__( graceid, label )
 
-        self.sendlvalert( lvalert )
+        self.sendlvalert( lvalert, self.__node__(graceid) )
         return FakeTTPResponse( jsonD )
 
     def removeLabel(self, graceid, label):
