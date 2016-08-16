@@ -1,0 +1,81 @@
+#!/usr/bin/python
+usage       = "lvalert_listen [--options] config"
+description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes forks processes like lvalert_listen would"
+author      = "reed.essick@ligo.org"
+
+#-------------------------------------------------
+
+import os
+import subprocess as sp
+
+from ligoTest.lvalert import lvalertTestUtils as utils
+
+from ConfigParser import SafeConfigParser
+
+from optparse import OptionParser
+
+#-------------------------------------------------
+
+def alert2listenr( node, message, node2cmd, verbose=False, dont_wait=False ):
+    '''
+    forks a process via subprocess
+    signature is specified within lvalertTestUtils
+
+    NOT IMPLEMENTED
+    '''
+    
+    raise NotImplementedError
+
+#-------------------------------------------------
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v', '--verbose', default=False, action='store_true')
+
+parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
+
+parser.add_option('--dont-wait', default=False, action='store_true')
+
+opts, args = parser.parse_args()
+
+if len(args)!=1:
+    raise ValueError('please supply exactly one argument\n%s'%usage)
+configFilename = args[0]
+
+lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
+if not os.path.exists(lvalertSrc):
+    raise ValueError('could not find lvalert.out file corresponding to --fakeDB-dir : %s'%lvalertSrc)
+
+#-------------------------------------------------
+
+if opts.verbose:
+    print "reading config : %s"%configFilename
+config = SafeConfigParser()
+config.read(configFilename)
+
+#-------------------------------------------------
+
+if opts.verbose:
+    print "setting up mapping between nodes and commands"
+
+node2cmd = dict()
+for section in config.sections():
+    if config.has_option(section, 'executable'):
+        cmd = config.get(section, 'executable').split()
+
+    elif config.has_option(section, 'executible'):
+        cmd = config.get(section, 'executible')
+
+    else:
+        raise ValueError('mal-formed config file!')
+
+    node2cmd[section] = cmd
+
+#-------------------------------------------------
+
+if opts.verbose:
+    print "monitoring : %s"%lvalertSrc
+    print "  cadence  : %.3f"%opts.cadence
+
+buf = utils.LVAlertBuffer( lvalertSrc )
+buf.monitor( alert2listener, config, cadence=opts.cadence, verbose=opts.verbose, dont_wait=opts.dont_wait )
