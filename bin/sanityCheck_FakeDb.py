@@ -11,6 +11,11 @@ import random
 
 from ligoTest.gracedb.rest import FakeDb
 
+import pipelines
+import schedule
+
+from lal.gpstime import tconvert
+
 from optparse import OptionParser
 
 #-------------------------------------------------
@@ -41,15 +46,15 @@ gdb = FakeDb(opts.output_dir)
 if opts.verbose:
     print "creating events"
 
-tmpfilename = os.path.join(opts.output_dir, "tmpfile.xml")
-open(tmpfilename, 'w').close()
-
 graceids = {}
 for x in xrange(opts.Nevents):
     if opts.verbose:
         print "    %d / %d : group, pipeline, search = %s, %s, %s"%(x+1, opts.Nevents, opts.group, opts.pipeline, opts.search)
 
     ### create the event
+    pipeObj = pipelines.initPipeline( float(tconvert('now')), 1e-9, ['H1','L1'], opts.group, opts.pipeline, schedule.GraceDBEvent(), search=opts.search, )
+    tmpfilename = pipeObj.genSchedule(directory=opts.output_dir).pop(0).filename
+
     response = gdb.createEvent(opts.group, opts.pipeline, tmpfilename, search=opts.search).json()
     graceid = response['graceid']
     graceids[graceid] = {'logs'   : [], 

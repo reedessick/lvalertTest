@@ -14,6 +14,8 @@ import json
 
 import time
 
+import numpy as np
+
 from glue.ligolw import utils as ligolw_utils
 from glue.ligolw import ligolw
 from glue.ligolw import table
@@ -189,6 +191,7 @@ class FakeDb():
 
             far = np.infty
 
+            readme = False
             for line in file_obj:
                 try:
                     key, val = line.split(':')
@@ -200,20 +203,22 @@ class FakeDb():
                     elif key == 'ifo':
                         ans['instruments'] = ",".join(val.split())
                 except:
-                    if "significance based on " in line: ### next line is a FAR statement
-                        fields = [float(_) for _ in file_obj.readline().strip()]
+                    if readme:
+                        fields = [float(_) for _ in line.strip().split()]
                         ans['far'] = fields[1]
                         break
+                    
+                    readme = "significance based on " in line ### next line is a FAR statement
                         
             return ans
 
         elif pipeline == 'lib':
             file_obj = open(filename, 'r')
-            a = json.loads( file_obj.read() )[0]
+            a = json.loads( file_obj.read() )["0"]
             file_obj.close()
 
             ans = {'gpstime'    : a['gpstime'],
-                   'FAR'        : a['far'],
+                   'FAR'        : a['FAR'],
                    'instruments': a['instruments'],
                    'likelihood' : a['likelihood'],
                    'nevents'    : a['nevents'],

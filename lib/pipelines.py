@@ -18,6 +18,7 @@ from glue.ligolw import utils as ligolw_utils
 from glue.ligolw import lsctables
 from glue.ligolw import table
 
+import lal
 from lal import series
 
 #-------------------------------------------------
@@ -179,7 +180,8 @@ class OmicronLIB(Pipeline):
             }
         filename = self.genFilename(directory=directory)
         file_obj = open(filename, 'w')
-        file_obj.write( json.dumps(d) )
+#        file_obj.write( json.dumps(d) )
+        json.dump( d, file_obj )
         file_obj.close()
 
         return filename, []
@@ -268,7 +270,7 @@ class CBCPipeline(Pipeline):
         if not os.path.exists(subdir):
             os.makedirs(subdir)
 
-        copyCoind = os.path.join(subdir, "coinc.xml")
+        copyCoinc = os.path.join(subdir, "coinc.xml")
         psd       = os.path.join(subdir, "psd.xml.gz")
         log       = os.path.join(subdir, "event.log")
 
@@ -282,13 +284,14 @@ class CBCPipeline(Pipeline):
         ### generate CoincInspiralTable?
         coinc = lsctables.CoincInspiralTable()
         xml_element.appendChild( coinc )
-
-        row = lsctables.CoincInspiral()
+        coinc.set_next_id(0)
 
         snrs = self.drawSNRs()
         m1, m2 = self.drawMasses()
 
-        row.coinc_event_id   = coinc.gen_next_id()
+        row = lsctables.CoincInspiral()
+
+        row.coinc_event_id   = coinc.get_next_id()
         row.ifos             = ",".join(self.instruments) 
         row.end_time         = int(self.gps) 
         row.end_time_ns      = 1e9*(self.gps - row.end_time)
@@ -302,8 +305,8 @@ class CBCPipeline(Pipeline):
         coinc.append( row )
 
         ### add in a SingleInspiralTable
-        snglInsp = lsctables.SingleInspiralTable()
-        xml_element.appendChild( snglInsp )
+#        snglInsp = lsctables.SnglInspiralTable()
+#        xml_element.appendChild( snglInsp )
 
         ### FIXME: need to actually fill in SingleInspiralTable
         ### then consider hooking this up via CoincMap and CoincTable elements
@@ -314,7 +317,20 @@ class CBCPipeline(Pipeline):
         return random.normalvariate(1.4, 0.1), random.normalvariate(1.4,0.1)
 
     def genPSDXMLdoc(self):
-        psdDict = { (ifo, simulateASD(0, 8193, df=0.125)) for ifo in self.intsruments }
+        psdDict = dict()
+        for ifo in self.instruments:
+            f0 = 0
+            deltaF = 0.125
+            psd = simulateASD(0, 8193, df=0.125)**2
+            size = len(psd)
+
+            unit = 's^-1'
+            gps = 0
+            name = 'psd'
+
+            psdDict[ifo] = lal.CreateREAL8FrequencySeries(name, gps, f0, deltaF, unit, size)
+            psdDict[ifo].data.data = psd
+
         xmldoc = series.make_psd_xmldoc( psdDict, xmldoc=None )
         return xmldoc
 
@@ -413,7 +429,7 @@ class MBTAOnline(CBCPipeline):
     allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
     def genFiles(self, directory='.'):
-        coincFilename, ancilliary = super(GSTLAL,self).genFiles(directory=directory)
+        coincFilename, ancilliary = super(MBTAOnline,self).genFiles(directory=directory)
 
         for ind, (dt, message, filename) in enumerate(ancilliary):
             if message == "strain spectral densities":
@@ -435,7 +451,7 @@ class PYCBC(CBCPipeline):
     allowed_searches = ['AllSky', 'LowMass', 'HighMass', 'MDC', None]
 
     def genFiles(self, directory='.'):
-        coincFilename, ancilliary = super(GSTLAL,self).genFiles(directory=directory)
+        coincFilename, ancilliary = super(PYCBC,self).genFiles(directory=directory)
 
         for ind, (dt, message, filename) in enumerate(ancilliary):
             if message == "strain spectral densities":
