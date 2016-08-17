@@ -18,7 +18,7 @@ parser = OptionParser(usage=usage, description=description)
 parser.add_option('-v', '--verbose', default=False, action='store_true')
 
 parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
-parser.add_option('-C', '--command-filename', default=None, type='string', help='the file into which lvalert commands must be written')
+parser.add_option('-C', '--command-filename', default=[], action='append', type='string', help='the file into which lvalert commands must be written')
 
 parser.add_option('-a', '--username', default='username', type='string')
 parser.add_option('-b', '--password', default='password', type='string')
@@ -36,9 +36,10 @@ if not os.path.exists(lvalertSrc):
 trackThese = [lvalertSrc]
 
 if opts.command_filename:
-    if not os.path.exists(opts.command_filename):
-        raise ValueError('could not find --command-filename=%s'%opts.command_filename)
-    trackThese.append(opts.command_filename)
+    for filename in opts.command_filename:
+        if not os.path.exists(filename):
+            raise ValueError('could not find --command-filename=%s'%filename)
+        trackThese.append(filename)
 
 #-------------------------------------------------
 
