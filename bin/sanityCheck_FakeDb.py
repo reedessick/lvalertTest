@@ -11,18 +11,14 @@ import random
 
 from ligoTest.gracedb.rest import FakeDb
 
+import simUtils as utils
+
 import pipelines
 import schedule
 
 from lal.gpstime import tconvert
 
 from optparse import OptionParser
-
-#-------------------------------------------------
-
-def genRandStr():
-    alpha = 'A B C D E F G H I J K L M N O P Q R S TU V W Y X Z'.split()
-    return "".join(random.choice(alpha) for _ in xrange(6))
 
 #-------------------------------------------------
 
@@ -68,8 +64,8 @@ for x in xrange(opts.Nevents):
         print "    %d / %d : group, pipeline, search = %s, %s, %s"%(x+1, opts.Nevents, opts.group, opts.pipeline, opts.search)
 
     ### create the event
-    randStr = genRandStr()
-    gDBevent = schedule.GraceDBEvent()
+    randStr = utils.genRandStr()
+    gDBevent = schedule.GraceDBEvent(randStr)
     pipeObj = pipelines.initPipeline( float(tconvert('now')), 
                                       1e-9, 
                                       ['H1','L1'], 
