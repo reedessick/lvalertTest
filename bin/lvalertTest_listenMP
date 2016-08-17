@@ -1,5 +1,5 @@
 #!/usr/bin/python
-usage       = "lvalert_listenMP [--options]"
+usage       = "lvalertTest_listenMP [--options]"
 description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes forks processes like lvalert_listenMP would"
 author      = "reed.essick@ligo.org"
 

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-usage       = "lvalert_listen [--options]"
+usage       = "lvalertTest_listen [--options]"
 description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes forks processes like lvalert_listen would"
 author      = "reed.essick@ligo.org"
 

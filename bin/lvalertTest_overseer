@@ -1,5 +1,5 @@
 #!/usr/bin/python
-usage       = "lvalert_overseer [--options]"
+usage       = "lvalertTest_overseer [--options]"
 description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes them accordingly"
 author      = "reed.essick@ligo.org"
 
