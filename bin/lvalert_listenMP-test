@@ -50,6 +50,7 @@ parser = OptionParser(usage=usage, description=description)
 parser.add_option('-v', '--verbose', default=False, action='store_true')
 
 parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
+parser.add_option('-C', '--command-filename', default=None, type='string', help='the file into which lvalert commands must be written')
 
 opts, args = parser.parse_args()
 
@@ -60,6 +61,12 @@ configFilename = args[0]
 lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
 if not os.path.exists(lvalertSrc):
     raise ValueError('could not find lvalert.out file corresponding to --fakeDB-dir : %s'%lvalertSrc)
+trackThese = [lvalertSrc]
+
+if opts.command_filename:
+    if not os.path.exists(opts.command_filename):
+        raise ValueError('could not find --command-filename=%s'%opts.command_filename)
+    trackThese.append(opts.command_filename)
 
 #-------------------------------------------------
 
@@ -126,8 +133,8 @@ for mp_child_name in config.sections():
 #-------------------------------------------------
 
 if opts.verbose:
-    print "monitoring : %s"%lvalertSrc
+    print "monitoring : %s"%(", ".join(trackThese))
     print "  cadence  : %.3f"%opts.cadence
 
-buf = utils.LVAlertBuffer( lvalertSrc )
+buf = utils.LVAlertBuffer( trackThese )
 buf.monitor( alert2interactiveQueue, node2proc, cadence=opts.cadence, verbose=opts.verbose )
