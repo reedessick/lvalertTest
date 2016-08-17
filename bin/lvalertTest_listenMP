@@ -1,5 +1,5 @@
 #!/usr/bin/python
-usage       = "lvalert_listenMP [--options] config"
+usage       = "lvalert_listenMP [--options]"
 description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes forks processes like lvalert_listenMP would"
 author      = "reed.essick@ligo.org"
 
@@ -30,18 +30,26 @@ def fork( (foo, args) ):
 
     return proc, conn1
 
-def alert2interactiveQueue( node, message, node2proc, verbose=False):
+def alert2interactiveQueue( node, message, node2proc={}, verbose=False):
     '''
     pushes alert through multiprocessing connection to child process
     signature is specified within lvalertTestUtils
     '''
-    proc, conn, mp_child_name = node2proc[node]
-    if not proc.is_alive():
-        for _, conn in node2proc.values():
-            conn.terminate()
-        raise RuntimeError("childProc=%s died!"%mp_child_name)
+    if node2proc.has_key(node):
+        proc, conn, mp_child_name = node2proc[node]
+        if not proc.is_alive():
+            for proc, conn, mp_child_name in node2proc.values():
+                proc.terminate()
+            raise RuntimeError("childProc=%s died!"%mp_child_name)
 
-    conn.send( (message, time.time()) )
+        conn.send( (message, time.time()) )
+
+        for proc, conn, mp_child_name in node2proc.values():
+            if not proc.is_alive():
+                for proc, conn, mp_child_name in node2proc.values():
+                    proc.terminate()
+                raise RuntimeError("childProc=%s died!"%mp_child_name)
+
 
 #-------------------------------------------------
 
@@ -52,11 +60,11 @@ parser.add_option('-v', '--verbose', default=False, action='store_true')
 parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
 parser.add_option('-C', '--command-filename', default=None, type='string', help='the file into which lvalert commands must be written')
 
-opts, args = parser.parse_args()
+parser.add_option('-c', "--config_file", default=None, type='string', help='config file with list of actions')
 
-if len(args)!=1:
-    raise ValueError('please supply exactly one argument\n%s'%usage)
-configFilename = args[0]
+parser.add_option('--cadence', default=0.1, type='float', help='how often we check lvalert.out for new messages')
+
+opts, args = parser.parse_args()
 
 lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
 if not os.path.exists(lvalertSrc):
@@ -70,52 +78,51 @@ if opts.command_filename:
 
 #-------------------------------------------------
 
-if opts.verbose:
-    print "reading config : %s"%configFilename
-config = SafeConfigParser()
-config.read(configFilename)
-
-#-------------------------------------------------
-
-if opts.verbose:
-    print "launching child processes"
 node2proc = dict()
-for mp_child_name in config.sections():
+if opts.config_file:
+    if opts.verbose:
+        print "reading config : %s"%opts.config_file
+    config = SafeConfigParser()
+    config.read(opts.config_file)
+
+    if opts.verbose:
+        print "launching child processes"
+    for mp_child_name in config.sections():
         childConfig = config.get(mp_child_name, "childConfig")
 
-        if cp.has_option(mp_child_name, "verbose"):
+        if config.has_option(mp_child_name, "verbose"):
             verbose = config.getboolean(mp_child_name, "verbose")
         else:
             verbose = False
-        if cp.has_option(mp_child_name, "sleep"):
+        if config.has_option(mp_child_name, "sleep"):
             sleep = config.getfloat(mp_child_name, "sleep")
         else:
             sleep = 0.1
 
         ### parameters about garbage collection
-        if cp.has_option(mp_child_name, "maxComplete"):
+        if config.has_option(mp_child_name, "maxComplete"):
             maxComplete = config.getint(mp_child_name, "maxComplete")
         else:
             maxComplete = 100
-        if cp.has_option(mp_child_name, "maxFrac"):
+        if config.has_option(mp_child_name, "maxFrac"):
             maxFrac = config.getfloat(mp_child_name, "maxFrac")
         else:
             maxFrac = 0.5
 
         ### parameters about warnings
-        if cp.has_option(mp_child_name, "warnThr"):
+        if config.has_option(mp_child_name, "warnThr"):
             warnThr = config.getfloat(mp_child_name, "warnThr")
         else:
             warnThr = 1e3
-        if cp.has_option(mp_child_name, "recipients"):
+        if config.has_option(mp_child_name, "recipients"):
             recipients = config.get(mp_child_name, "recipients").split()
         else:
             recipients = []
-        if cp.has_option(mp_child_name, "warnDelay"):
+        if config.has_option(mp_child_name, "warnDelay"):
             warnDelay = config.getfloat(mp_child_name, "warnDelay")
         else:
             warnDelay = 3600
-        if cp.has_option(mp_child_name, "maxWarn"):
+        if config.has_option(mp_child_name, "maxWarn"):
             maxWarn = config.getint(mp_child_name, "maxWarn")
         else:
             maxWarn = 24
@@ -124,7 +131,7 @@ for mp_child_name in config.sections():
         proc, conn = fork( (iQ.interactiveQueue, [childConfig, verbose, sleep, maxComplete, maxFrac, warnThr, recipients, warnDelay, maxWarn]) )
 
         ### fill in node2proc
-        for node in cp.get(mp_child_name, "nodes").split(): ### iterate over nodes and add them to this process
+        for node in config.get(mp_child_name, "nodes").split(): ### iterate over nodes and add them to this process
             if node2proc.has_key(node):
                 raise ValueError("node=%s assigned to more than one child process!" % (node))
             else:
@@ -137,4 +144,4 @@ if opts.verbose:
     print "  cadence  : %.3f"%opts.cadence
 
 buf = utils.LVAlertBuffer( trackThese )
-buf.monitor( alert2interactiveQueue, node2proc, cadence=opts.cadence, verbose=opts.verbose )
+buf.monitor( alert2interactiveQueue, cadence=opts.cadence, node2proc=node2proc, verbose=opts.verbose )

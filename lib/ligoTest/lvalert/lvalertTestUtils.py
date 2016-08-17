@@ -20,7 +20,7 @@ def line2alert( line ):
     '''
     given a line from a file, does the inverse of alert2line
     '''
-    return line.strip().split("|")
+    return line.split("|")
 
 #-------------------------------------------------
 
@@ -35,11 +35,11 @@ class LVAlertBuffer():
             filenames = [filenames]
         self.fileMonitors = [FileMonitor(filename) for filename in filenames]
 
-    def monitor(self, foo, cadence=0.1, *args, **kwargs):
+    def monitor(self, foo, cadence=0.1, **kwargs):
         '''
         monitors the file, and when a change is detected we extract the call foo with signature:
         for node, message in self.extract():
-            foo( node, message, *args, **kwargs )
+            foo( node, message, **kwargs )
         '''
         while True:
             for fileMonitor in self.fileMonitors:
@@ -49,10 +49,10 @@ class LVAlertBuffer():
                     fileMonitor.setTimestamp() ### update
 
                     for node, message in fileMonitor.extract():
-                        foo( node, message, *args, **kwargs )
+                        foo( node, message, **kwargs )
 
             wait = cadence - (time.time()-t)
-            if wait:
+            if wait>0:
                 time.sleep(wait)
 
 class FileMonitor():
@@ -61,12 +61,12 @@ class FileMonitor():
     WARNING: holds an open file object in 'r' mode. This may cause issues if we have too many of these things...
     '''
 
-    def __init__(self, filenames):
+    def __init__(self, filename):
         if not os.path.exists(filename):
             raise ValueError('could not find filename=%s'%filename)
         self.filename = filename
         self.file_obj = open(filename, 'r')
-        self.file_obj.seek(-1,2) ### go to end of file
+        self.file_obj.seek(0, 2) ### go to end of file
         self.setTimestamp()
 
     def getTimestamp(self):
@@ -91,10 +91,10 @@ class FileMonitor():
         '''
         extracts the new messages and returns them
         '''
-        ans = self.file_obj.readline()
+        line = self.file_obj.readline().strip()
         nodeMessage = []
-        while ans:
-            nodeMessage.append( line2alert(ans) )
-            ans = self.file_obj.readline()
+        while line:
+            nodeMessage.append( line2alert(line) )
+            line = self.file_obj.readline().strip()
 
         return nodeMessage

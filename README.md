@@ -22,7 +22,7 @@ I've set up an lvalert node specifically for testing purposes. Here are the pert
 
     resource : lvalertMP-test
 
-    node : lvalertMP-TestNode
+    node : lvalerttest-testnode
 
 I've also written a simple script to ping this node with basic messages
 

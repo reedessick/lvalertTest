@@ -4,4 +4,4 @@
 ### useful when debugging lvalert_listenMP or other new functionality
 
 read a
-echo ${a} >> alerts.out
+echo ${a}

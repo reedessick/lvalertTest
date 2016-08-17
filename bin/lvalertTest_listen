@@ -1,11 +1,12 @@
 #!/usr/bin/python
-usage       = "lvalert_listen [--options] config"
+usage       = "lvalert_listen [--options]"
 description = "a script that monitors a fakeDB_directory for new lvalert messages and destributes forks processes like lvalert_listen would"
 author      = "reed.essick@ligo.org"
 
 #-------------------------------------------------
 
 import os
+import sys
 import subprocess as sp
 
 import multiprocessing as mp
@@ -27,28 +28,29 @@ def forked_wait(cmd, file_obj):
     the forked process that this function creates become orphaned, and will automatically
     be removed from the process table upon completion.
     """
-    sp.Popen(cmd, stdin=file_obj)
+    sp.Popen(cmd, stdin=file_obj, stdout=sys.stdout, stderr=sys.stderr)
 
 
-def alert2listenr( node, message, node2cmd, verbose=False, dont_wait=False ):
+def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False ):
     '''
     forks a process via subprocess
     signature is specified within lvalertTestUtils
     '''
-    if dont_wait:
-        file_obj = tempfile.SpooledTemporaryFile(mode="w+r", max_size=1000)
-        file_obj.write(message)
-        file_obj.readlines() ### bug fix for "alert_type"=="new" events
-                             ### without this, the position in file_obj gets messed up
-                             ### no idea why, but it might be related to long messages becoming multiple stanzas
-        file_obj.seek(0, 0)
-        p = multiprocessing.Process(target=forked_wait, args=(node2cmd[node], file_obj))
-        p.start()
-        p.join()
-        file_obj.close()
+    if node2cmd.has_key(node):
+        if dont_wait:
+            file_obj = tempfile.SpooledTemporaryFile(mode="w+r", max_size=1000)
+            file_obj.write(message)
+            file_obj.readlines() ### bug fix for "alert_type"=="new" events
+                                 ### without this, the position in file_obj gets messed up
+                                 ### no idea why, but it might be related to long messages becoming multiple stanzas
+            file_obj.seek(0, 0)
+            p = multiprocessing.Process(target=forked_wait, args=(node2cmd[node], file_obj))
+            p.start()
+            p.join()
+            file_obj.close()
 
-    else:
-        sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE).communicate(message) ### we don't capture the output because lvalert_listen does not
+        else:
+            print sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE ).communicate(message)[0] ### we don't capture the output because lvalert_listen does not
 
 #-------------------------------------------------
 
@@ -59,13 +61,13 @@ parser.add_option('-v', '--verbose', default=False, action='store_true')
 parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
 parser.add_option('-C', '--command-filename', default=None, type='string', help='the file into which lvalert commands must be written')
 
+parser.add_option('-c', "--config_file", default=None, type='string', help='config file with list of actions')
+
 parser.add_option('--dont-wait', default=False, action='store_true')
 
-opts, args = parser.parse_args()
+parser.add_option('--cadence', default=0.1, type='float', help='how often we check lvalert.out for new messages')
 
-if len(args)!=1:
-    raise ValueError('please supply exactly one argument\n%s'%usage)
-configFilename = args[0]
+opts, args = parser.parse_args()
 
 lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
 if not os.path.exists(lvalertSrc):
@@ -79,28 +81,27 @@ if opts.command_filename:
 
 #-------------------------------------------------
 
-if opts.verbose:
-    print "reading config : %s"%configFilename
-config = SafeConfigParser()
-config.read(configFilename)
-
-#-------------------------------------------------
-
-if opts.verbose:
-    print "setting up mapping between nodes and commands"
-
 node2cmd = dict()
-for section in config.sections():
-    if config.has_option(section, 'executable'):
-        cmd = config.get(section, 'executable').split()
+if opts.config_file:
+    if opts.verbose:
+        print "reading config : %s"%opts.config_file
+    config = SafeConfigParser()
+    config.read(opts.config_file)
 
-    elif config.has_option(section, 'executible'):
-        cmd = config.get(section, 'executible')
+    if opts.verbose:
+        print "setting up mapping between nodes and commands"
 
-    else:
-        raise ValueError('mal-formed config file!')
+    for section in config.sections():
+        if config.has_option(section, 'executable'):
+            cmd = config.get(section, 'executable').split()
 
-    node2cmd[section] = cmd
+        elif config.has_option(section, 'executible'):
+            cmd = config.get(section, 'executible')
+
+        else:
+            raise ValueError('mal-formed config file!')
+
+        node2cmd[section] = cmd
 
 #-------------------------------------------------
 
@@ -109,4 +110,4 @@ if opts.verbose:
     print "  cadence  : %.3f"%opts.cadence
 
 buf = utils.LVAlertBuffer( trackThese )
-buf.monitor( alert2listener, config, cadence=opts.cadence, verbose=opts.verbose, dont_wait=opts.dont_wait )
+buf.monitor( alert2listener, cadence=opts.cadence, node2cmd=node2cmd, verbose=opts.verbose, dont_wait=opts.dont_wait )
