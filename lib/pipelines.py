@@ -98,7 +98,7 @@ class Pipeline(object):
         return snrs
 
     def genFilename(self, directory=".", suffix='json'):
-        return os.path.join(directory, self.pipeline+"_"+"".join(random.choice(letters) for _ in xrange(6))+"."+suffix)
+        return os.path.join(directory, self.pipeline+"_"+self.graceDBevent.get_randStr()+"."+suffix)
 
     def genFiles(self, directory='.'):
         '''
@@ -111,11 +111,13 @@ class Pipeline(object):
         '''
         generate schedule for event creation
         '''
-        sched = schedule.Schedule()
+        sched = schedule.Schedule(t0=0)
+
         firstFile, otherFiles = self.genFiles(directory=directory) ### generate files
         sched.insert( schedule.CreateEvent( 0.0, self.graceDBevent, self.group, self.pipeline, firstFile, search=self.search, gdb_url=self.gdb_url ) )
         for dt, message, filename in otherFiles: ### schedule any ancilliary file uploads
             sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, filename=filename, gdb_url=self.gdb_url ) ) 
+
         return sched
 
 #------------------------
@@ -264,7 +266,7 @@ class CBCPipeline(Pipeline):
     allowed_groups   = ['CBC', 'Test']
 
     def genFilename(self, directory="."):
-        randStr = "".join(random.choice(letters) for _ in xrange(6))
+        randStr = self.graceDBevent.get_randStr()
         coinc   = os.path.join(directory, self.pipeline+"_coinc_"+randStr+".xml")
 
         subdir = os.path.join(directory, randStr)

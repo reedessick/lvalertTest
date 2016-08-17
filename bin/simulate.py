@@ -168,10 +168,14 @@ for ind, wait in enumerate(waits):
 
 #-------------------------------------------------
 
-### actually perform the actions
+## actually perform the actions
 sched.bump( opts.pause ) ### bump everything by 10 seconds 
 if opts.verbose:
-    print "waiting ~%.3f seconds to ensure everything is sequenced correctly"%opts.pause
+    print """
+-----------------------------------------------------------------
+waiting ~%.3f seconds to ensure everything is sequenced correctly
+-----------------------------------------------------------------
+"""%opts.pause
 time.sleep( opts.pause )
 
 if opts.verbose:

@@ -98,7 +98,7 @@ class FakeDb():
 
     ### write lvalert messages into a file ###
 
-    def sendlvalert(self, message ):
+    def sendlvalert(self, message, node ):
         file_obj = open(self.lvalert, 'a')
         print >> file_obj, lvutils.alert2line(node, message)
         file_obj.close()
@@ -166,7 +166,7 @@ class FakeDb():
         return os.path.join(self.home, graceid, 'logs.pkl')
 
     def __path2len__(self, path):
-        return len(self.extract(path))
+        return len(self.__extract__(path))
 
     def __append__(self, stuff, path):
         '''append to pkl file'''
@@ -356,7 +356,7 @@ class FakeDb():
         else:
             shortFilename = ''
 
-        ind = self.path2len(self.__logsPath__(graceid))
+        ind = self.__path2len__(self.__logsPath__(graceid))
         jsonD = {'comment': message,
                  'created': time.time(),
                  'self': self.__logsPath__(graceid),
@@ -371,7 +371,7 @@ class FakeDb():
                            },
                 }
 
-        ind = self.__append__( jsonD, self.__logsPath__(graceid)) ### should give the same number as self.path2len(self.__logsPath(graceid))+1
+        ind = self.__append__( jsonD, self.__logsPath__(graceid)) ### should give the same number as self.__path2len__(self.__logsPath(graceid))+1
         if filename:
             self.__copyFile__(graceid, filename)
 

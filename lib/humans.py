@@ -41,7 +41,7 @@ class HumanSignoff(object):
         '''
         flip a coinc and decide if we get an OK or a NO label
         '''
-        if random.random() < self.respondProb: ### we succeed -> OK label
+        if random.random() < self.respondSuccess: ### we succeed -> OK label
             return "%sOK"%(self.name)
         else: ### we reject -> NO label
             return "%sNO"%(self.name)
@@ -55,12 +55,13 @@ class HumanSignoff(object):
             request_dt = max(0, random.normalvariate(self.requestTimeout, self.requestJitter) )
             request = schedule.WriteLabel( request_dt, self.graceDBevent, self.request(), gdb_url=self.gdb_url )
             sched.insert( request )
-        if respond and (random.random() < self.respondProbOfSuccess):
+        if respond and (random.random() < self.respondProb):
             respond_dt = max(0, random.normalvariate(self.respondTimeout, self.respondJitter))
             if request:
                 respond_dt = max(request_dt, respond_dt)
-                remove = schedule.RemoveLabel( respond_dt, self.graceDBevent, self.request(), gdb_url=self.gdb_url )
-                sched.insert( remove )
+                ### currently, RemoveLable is not implemented...
+#                remove = schedule.RemoveLabel( respond_dt, self.graceDBevent, self.request(), gdb_url=self.gdb_url )
+#                sched.insert( remove )
             respond = schedule.WriteLabel( respond_dt, self.graceDBevent, self.decide(), gdb_url=self.gdb_url )
             sched.insert( respond )
         return sched

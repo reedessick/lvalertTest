@@ -9,6 +9,7 @@ import json
 
 from ligo.gracedb.rest import GraceDb
 from ligoTest.gracedb.rest import FakeDb
+from ligoTest.gracedb.rest import FakeTTPResponse
 
 #-------------------------------------------------
 
@@ -29,11 +30,15 @@ class GraceDBEvent(object):
     '''
     a wrapper around a single attribute (graceid) so that different actions can reference the same event without know what the graceid is a priori
     '''
-    def __init__(self, graceid=None):
-        self.__graceid__ = None
+    def __init__(self, randStr, graceid=None):
+        self.__randStr__ = randStr
+        self.__graceid__ = graceid
 
     def __str__(self):
-        return "graceid : "+str(self.__graceid__)
+        return "randStr : %s\ngraceid : %s"%(self.randStr, str(self.__graceid__))
+
+    def get_randStr(self):
+        return self.__randStr__
 
     def get_graceid(self, force=False):
         if force or (self.__graceid__!=None):
@@ -88,7 +93,8 @@ class Schedule(object):
     '''
     an ordered list of Actions
     '''
-    def __init__(self):
+    def __init__(self, t0=0):
+        self.t0 = t0
         self.actions = []
 
     def __iter__(self):
@@ -131,7 +137,7 @@ class Schedule(object):
     def bump(self, delay):
         '''increases expiration of all contained actions by delay'''
         for action in self.actions:
-            action.expiration += delay
+            action.dt += delay
 
     def setExpiration(self, t0):
         for action in self.actions:
@@ -156,12 +162,13 @@ class CreateEvent(Action):
 
     def __str__(self):
         return """CreateEvent -> %s
+    randStr    : %s
     group      : %s
     pipeline   : %s
     search     : %s
     filename   : %s
     timeout    : %.3f
-    expiration : %s"""%(self.gdb_url, self.group, self.pipeline, self.search, self.filename, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_randStr(), self.group, self.pipeline, self.search, self.filename, self.dt, "%.3f"%self.expiration if self.expiration!=None else "None")
 
     def createEvent(self, *args, **kwargs):
         '''
@@ -169,9 +176,9 @@ class CreateEvent(Action):
         '''
         gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
         httpResponse = gdb.createEvent( self.group, self.pipeline, self.filename, search=self.search )
-        httpString = httpResponse.read()
-        self.graceDBevent.set_graceid( json.loads( httpString )['graceid'] ) 
-        return httpResponse
+        data = httpResponse.json()
+        self.graceDBevent.set_graceid( data['graceid'] ) 
+        return FakeTTPResponse( data )  ### NOTE: we've already read the httpResponse once, so we need to make a new one...
 
 class WriteLabel(Action):
     '''
@@ -187,10 +194,11 @@ class WriteLabel(Action):
 
     def __str__(self):
         return """WriteLabel -> %s
+    randStr    : %s
     graceid    : %s
     label      : %s
     timeout    : %.3f
-    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_randStr(), self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def writeLabel(self, *args, **kwargs):
         gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
@@ -211,10 +219,11 @@ class RemoveLabel(Action):
 
     def __str__(self):
         return """RemoveLabel -> %s
+    randStr    : %s
     graceid    : %s
     label      : %s
     timeout    : %.3f
-    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_randStr(), self.graceDBevent.get_graceid(force=True), self.label, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def removeLabel(self, *args, **kwargs):
         gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
@@ -237,12 +246,13 @@ class WriteLog(Action):
 
     def __str__(self):
         return """WriteLog -> %s
+    randStr    : %s
     graceid    : %s
     message    : %s
     filename   : %s
     tagname    : %s
     timeout    : %.3f
-    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.message, self.filename, self.tagname, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_randStr(), self.graceDBevent.get_graceid(force=True), self.message, self.filename, self.tagname, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def writeLog(self, *args, **kwargs):
         gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb
@@ -264,10 +274,11 @@ class WriteFile(Action):
 
     def __str__(self):
         return """WriteFile -> %s
+    randStr    : %s
     graceid    : %s
     filename   : %s
     timeout    : %.3f
-    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_graceid(force=True), self.filename, self.dt, "%.3f"%self.expiration if self.expiration else "None")
+    expiration : %s"""%(self.gdb_url, self.graceDBevent.get_randStr(), self.graceDBevent.get_graceid(force=True), self.filename, self.dt, "%.3f"%self.expiration if self.expiration else "None")
 
     def writeFile(self, *args, **kwargs):
         gdb = initGraceDb(self.gdb_url) ### delegate to work out whether we want GraceDb or FakeDb

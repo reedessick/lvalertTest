@@ -3,6 +3,8 @@ author = "reed.essick@ligo.org"
 
 #-------------------------------------------------
 
+import os
+
 import random
 
 import numpy as np
@@ -23,7 +25,7 @@ class SegDB2GrcDB():
         self.flags = flags
 
     def genFilename(self, flag, start, dur, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         filename = "%s/%s-%d-%d.xml"%(dirname, flag.replace(":","_"), start, dur)
@@ -40,10 +42,10 @@ class SegDB2GrcDB():
             message = 'began searching for segments in : fakeSegDB'
             sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
-            for flag, (delay, jitter, prob), (start, dur) in flags:
+            for flag, (delay, jitter, prob), (start, dur) in self.flags:
                 if random.random() < prob:
                     filename = self.genFilename( flag, start, dur, directory=directory )
-                    start_time += max(0, random.normalvariate(delay, jitter))
+                    start_dt += max(0, random.normalvariate(delay, jitter))
                     sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, flag, filename=filename, gdb_url=self.gdb_url ) )
                 else:
                     break ### process failed, so we stop
@@ -141,8 +143,8 @@ class IDQ():
         self.statsJitter = statsJitter
         self.statsProb   = statsProb
 
-    def gentablesFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+    def genTablesFilename(self, instrument, classifier, directory='.'):
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -152,7 +154,7 @@ class IDQ():
         return filename
 
     def genFAPFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -162,7 +164,7 @@ class IDQ():
         return filename
 
     def genGWFFilenames(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -174,7 +176,7 @@ class IDQ():
         return fapfilename, rnkfilename
 
     def genTimeseriesFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -184,7 +186,7 @@ class IDQ():
         return filename
 
     def genActiveChanFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -196,7 +198,7 @@ class IDQ():
         return jsonFilename, pngFilename
 
     def genCalibFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -208,7 +210,7 @@ class IDQ():
         return jsonFilename, pngFilename
 
     def genROCFilename(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -220,7 +222,7 @@ class IDQ():
         return jsonFilename, pngFilename
 
     def genStatsFilenames(self, instrument, classifier, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
@@ -245,18 +247,11 @@ class IDQ():
 
         for instrument in self.instruments:
             if random.random() < self.startProb:
-                dt = max(0, random.normalvariate(self.startDelay, startJitter))
+                dt = max(0, random.normalvariate(self.startDelay, self.startJitter))
                 message = 'Started Searching for iDQ information within [%d, %d] at %s'%(self.start, self.stop, instrument)
                 sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
             
                 for classifier in self.classifiers:
-                    if random.random() < self.startProb:
-                        dt = max(0, random.normalvariate(self.startDelay, startJitter))
-                        message = 'Started Searching for iDQ information within [%d, %d] at %s'%(self.start, self.stop, instrument)
-                        sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
-                    else:
-                        break
-
                     if random.random() < self.tablesProb:
                         dt += max(0, random.normalvariate(self.tablesDelay, self.tablesJitter))
                         message = 'iDQ glitch tables %s:'%instrument
@@ -326,8 +321,8 @@ class IDQ():
 
                     if random.random() < self.statsProb:
                         dt += max(0, random.normalvariate(self.statsDelay, self.statsJitter))
-                        calibMessage = 'iDQ local calibration vital statistics for %s at %s'
-                        trainMessage = 'iDQ local training vital statistics for %s at %s'
+                        calibMessage = 'iDQ local calibration vital statistics for %s at %s'%(classifier, instrument)
+                        trainMessage = 'iDQ local training vital statistics for %s at %s'%(classifier, instrument)
                         calibFilename, trainFilename = self.genStatsFilenames(instrument, classifier, directory=directory)
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, calibMessage, filename=calibFilename, gdb_url=self.gdb_url ) )
                         sched.insert( schedule.WriteLog( dt, self.graceDBevent, trainMessage, filename=trainFilename, gdb_url=self.gdb_url ) )
@@ -335,7 +330,7 @@ class IDQ():
                         break
 
                 else: ### we made it all the way through! add finish statement
-                    message = 'Finished searching for iDQ information within [%d, %d] at %s'%(instrument, self.start, self.stop)
+                    message = 'Finished searching for iDQ information within [%d, %d] at %s'%(self.start, self.stop, instrument)
                     sched.insert( schedule.WriteLog( dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
         return sched

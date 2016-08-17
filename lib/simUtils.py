@@ -2,7 +2,11 @@ description = "a module housing helper routines for simulateGraceDBEvent and sim
 
 #-------------------------------------------------
 
+import os
+
 import numpy as np
+
+import random
 
 import schedule
 
@@ -38,13 +42,17 @@ def poisson_dt( rate ):
 # generate a schedule for a single event
 #-------------------------------------------------
 
+def genRandStr():
+    alpha = 'A B C D E F G H I J K L M N O P Q R S TU V W Y X Z'.split()
+    return "".join(random.choice(alpha) for _ in xrange(6))
+
 def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://gracedb.ligo.org/api/', directory='.'):
     '''
     generates a schedule of actions for a single event based on the info in config
     '''
-    graceDBevent = schedule.GraceDBEvent() ### needs to be passed to all objects which make schedules
+    graceDBevent = schedule.GraceDBEvent(genRandStr()) ### needs to be passed to all objects which make schedules
 
-    sched = schedule.Schedule()
+    sched = schedule.Schedule(t0=0)
 
     ### add schedule for event creation
     group = config.get('general', 'group')
@@ -118,7 +126,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
         startDelay  = config.getfloat('idq', 'start delay')
         startJitter = config.getfloat('idq', 'start jitter')
-        startProb   = conifg.getfloat('idq', 'start prob')
+        startProb   = config.getfloat('idq', 'start prob')
 
         tablesDelay  = config.getfloat('idq', 'tables delay')
         tablesJitter = config.getfloat('idq', 'tables jitter')
@@ -216,7 +224,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
                                 startProb   = startProb,
                               )
 
-        sched += segDB.generateSchedule(directory=directory)
+        sched += segDB.genSchedule(directory=directory)
 
     ### add schedule for pe
     if config.has_section('plot skymaps'):
@@ -275,8 +283,9 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
         agenda = bayestar.genSchedule(directory=directory, lvem=lvem)
 
         for action in sched:
+            print action
             if isinstance(action, schedule.WriteLog):
-                if os.path.basename(action.filename) == "psd.xml.gz":
+                if action.filename and (os.path.basename(action.filename)=="psd.xml.gz"):
                     agenda.bump( action.dt )
                     sched += agenda ### only add Bayestar stuff if we plan to upload a psd.xml.gz
                     break
@@ -322,7 +331,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
     # lib
     if config.has_section('lib'):
-        lvem        = config.getboolean('lalinference', 'lvem')
+        lvem        = config.getboolean('lib', 'lvem')
 
         startDelay  = config.getfloat('lib', 'start delay')
         startJitter = config.getfloat('lib', 'start jitter')
@@ -359,7 +368,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
     # bayeswave
     if config.has_section('bayeswave'):
-        lvem        = config.getboolean('lalinference', 'lvem')
+        lvem        = config.getboolean('bayeswave', 'lvem')
 
         startDelay  = config.getfloat('bayeswave', 'start delay')
         startJitter = config.getfloat('bayeswave', 'start jitter')
@@ -373,7 +382,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
         skymapJitter = config.getfloat('bayeswave', 'skymap jitter')
         skymapProb   = config.getfloat('bayeswave', 'skymap prob')
 
-        bayeswave = pe.Bayeswave( graceDBevent,
+        bayeswave = pe.BayesWave( graceDBevent,
                                  gdb_url           = gdb_url,
                                  startTimeout      = startDelay,
                                  startJitter       = startJitter,
@@ -396,7 +405,7 @@ def genSchedule(gps, far, instruments, config, safe=True, gdb_url='https://grace
 
     # cwbPE
     if config.has_section('cwbPE'):
-        lvem        = config.getboolean('lalinference', 'lvem')
+        lvem        = config.getboolean('cwbPE', 'lvem')
 
         finishDelay  = config.getfloat('cwbPE', 'finish delay')
         finishJitter = config.getfloat('cwbPE', 'finish jitter')

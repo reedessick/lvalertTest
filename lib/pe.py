@@ -40,7 +40,7 @@ class Bayestar():
         self.skyviewerProb    = skyviewerProb
 
     def writeFITS(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         fitsname = "%s/bayestar.fits.gz"%dirname
@@ -58,7 +58,7 @@ class Bayestar():
                 sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
             if random.random() < self.finishProb:
-                skymap_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
+                finish_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
 
                 message = 'INFO:BAYESTAR:sky localization complete'
                 sched.insert( schedule.WriteLog( finish_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
@@ -73,8 +73,8 @@ class Bayestar():
                     sched.insert( schedule.WriteLog( skymap_dt, self.graceDBevent, message, filename=fitsname, tagname=tagname, gdb_url=self.gdb_url ) )
 
                     ### add in plotting and skyviewer
-                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname) \
-                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname)
+                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname) \
+                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname)
                     agenda.bump( skymap_dt )
                     sched += agenda
 
@@ -106,7 +106,7 @@ class LALInference():
         self.skyviewerProb    = skyviewerProb
 
     def writeFITS(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         fitsname = "%s/lalinference_skymap.fits.gz"%dirname
@@ -114,7 +114,7 @@ class LALInference():
         return fitsname
 
     def writeDat(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         datname = "%s/posterior_samples.dat"%dirname
@@ -132,7 +132,7 @@ class LALInference():
             sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
             if random.random() < self.finishProb:
-                skymap_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
+                finish_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
 
                 message = 'LALInference online estimation finished'
                 filename = self.writeDat(directory=directory)
@@ -148,8 +148,8 @@ class LALInference():
                     sched.insert( schedule.WriteLog( skymap_dt, self.graceDBevent, message, filename=fitsname, tagname=tagname, gdb_url=self.gdb_url ) )
 
                     ### add in plotting and skyviewer
-                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname) \
-                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname)
+                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname) \
+                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname)
                     agenda.bump( skymap_dt )
                     sched += agenda
 
@@ -181,7 +181,7 @@ class LIB():
         self.skyviewerProb    = skyviewerProb
 
     def writeFITS(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         fitsname = "%s/LIB_skymap.fits.gz"%dirname
@@ -189,7 +189,7 @@ class LIB():
         return fitsname
 
     def writeDat(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         datname = "%s/posterior_samples.dat"%dirname
@@ -207,7 +207,7 @@ class LIB():
             sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
             if random.random() < self.finishProb:
-                skymap_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
+                finish_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
 
                 message = 'LIB Parameter estimation finished'
                 sched.insert( schedule.WriteLog( finish_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
@@ -222,8 +222,8 @@ class LIB():
                     sched.insert( schedule.WriteLog( skymap_dt, self.graceDBevent, message, filename=fitsname, tagname=tagname, gdb_url=self.gdb_url ) )
 
                     ### add in plotting and skyviewer
-                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname) \
-                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname)
+                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname) \
+                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname)
                     agenda.bump( skymap_dt )
                     sched += agenda
 
@@ -255,14 +255,14 @@ class BayesWave():
         self.skyviewerProb    = skyviewerProb
 
     def writeFITS(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         fitsname = "%s/BW_skymap.fits"%dirname
         open(fitsname, 'w').close() ### may want to do more than this...
         return fitsname
 
-    def genSchedule(self, lvem=True):
+    def genSchedule(self, directory='.', lvem=True):
         '''
         generate a schedule for Bayestar
         '''
@@ -273,7 +273,7 @@ class BayesWave():
             sched.insert( schedule.WriteLog( start_dt, self.graceDBevent, message, gdb_url=self.gdb_url ) )
 
             if random.random() < self.finishProb:
-                skymap_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
+                finish_dt = max(start_dt, random.normalvariate(self.finishTimeout, self.finishJitter))
 
                 for message in ['BWB Follow-up results', 'BWB parameter estimation', 'BWB Bayes Factors']:
                     sched.insert( schedule.WriteLog( finish_dt, self.graceDBevent, message, tagname=['pe'], gdb_url=self.gdb_url ) )
@@ -288,8 +288,8 @@ class BayesWave():
                     sched.insert( schedule.WriteLog( skymap_dt, self.graceDBevent, message, filename=fitsname, tagname=tagname, gdb_url=self.gdb_url ) )
                     
                     ### add in plotting and skyviewer
-                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname) \
-                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname)
+                    agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname) \
+                             + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname)
                     agenda.bump( skymap_dt )
                     sched += agenda
 
@@ -317,7 +317,7 @@ class CoherentWaveBurst():
         self.skyviewerProb    = skyviewerProb
 
     def writeFITS(self, directory='.'):
-        dirname = "%s/%s/"%(directory, self.graceDBevent.get_graceid())
+        dirname = "%s/%s/"%(directory, self.graceDBevent.get_randStr())
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         fitsname = "%s/skyprobcc.fits.gz"%dirname
@@ -330,7 +330,7 @@ class CoherentWaveBurst():
         '''
         sched = schedule.Schedule()
         if random.random() < self.finishProb:
-            skymap_dt = max(0, random.normalvariate(self.finishTimeout, self.finishJitter))
+            finish_dt = max(0, random.normalvariate(self.finishTimeout, self.finishJitter))
 
             message = 'cWB parameter estimation'
             sched.insert( schedule.WriteLog( finish_dt, self.graceDBevent, message, tagname=['pe'], gdb_url=self.gdb_url ) )
@@ -345,8 +345,8 @@ class CoherentWaveBurst():
                 sched.insert( schedule.WriteLog( skymap_dt, self.graceDBevent, message, filename=fitsname, tagname=tagname, gdb_url=self.gdb_url ) )
 
                 ### add in plotting and skyviewer
-                agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname) \
-                         + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, directory=directory, tagname=tagname)
+                agenda = PlotSkymaps(self.graceDBevent, timeout=self.plotSkymapTimeout, jitter=self.plotSkymapJitter, probOfSuccess=self.plotSkymapProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname) \
+                         + Skyviewer(self.graceDBevent, timeout=self.skyviewerTimeout, jitter=self.skyviewerJitter, probOfSuccess=self.skyviewerProb, gdb_url=self.gdb_url).genSchedule(fitsname, tagname=tagname)
                 agenda.bump( skymap_dt )
                 sched += agenda
 
@@ -366,15 +366,15 @@ class PlotSkymaps():
     def genMessage(self, fits):
         return "Mollweide projection of %s"%fits
 
-    def genPNG(self, fits, directory='.'):
-        pngName = os.path.join(directory, fits.split('.')[0]+".png")
+    def genPNG(self, fits):
+        pngName = fits.split('.')[0]+".png"
         open(pngName,"w").close() ### touch it so it exists
         return pngName
 
-    def genSchedule(self, fits, directory='.', tagname=['sky_loc']):
+    def genSchedule(self, fits, tagname=['sky_loc']):
         sched = schedule.Schedule() 
         if random.random() < self.prob:
-            sched.insert( schedule.WriteLog( max(0, random.normalvariate(self.timeout, self.jitter)), self.graceDBevent, self.genMessage(fits), filename=self.genPNG(fits, directory=directory), tagname=tagname, gdb_url=self.gdb_url ) )
+            sched.insert( schedule.WriteLog( max(0, random.normalvariate(self.timeout, self.jitter)), self.graceDBevent, self.genMessage(fits), filename=self.genPNG(fits), tagname=tagname, gdb_url=self.gdb_url ) )
         return sched
 
 class Skyviewer():
@@ -389,13 +389,15 @@ class Skyviewer():
     def genMessage(self):
         return ''
 
-    def genJSON(self, fits, directory='.'):
-        jsonName = os.path.join(directory, fits.strip('.gz').strip("fits")+"json")
+    def genJSON(self, fits):
+        if fits.endswith('.gz'):
+            fits = fits[:-3]
+        jsonName = fits[:-4]+"json"
         open(jsonName, "w").close() ### touch it so it exists
         return jsonName
 
-    def genSchedule(self, fits, directory='.', tagname=['sky_loc']):
+    def genSchedule(self, fits, tagname=['sky_loc']):
         sched = schedule.Schedule()
         if random.random() < self.prob:
-            sched.insert( schedule.WriteLog( max(0, random.normalvariate(self.timeout, self.jitter)), self.graceDBevent, self.genMessage(), filename=self.genJSON(fits, directory=directory), tagname=tagname, gdb_url=self.gdb_url ) )
+            sched.insert( schedule.WriteLog( max(0, random.normalvariate(self.timeout, self.jitter)), self.graceDBevent, self.genMessage(), filename=self.genJSON(fits), tagname=tagname, gdb_url=self.gdb_url ) )
         return sched
