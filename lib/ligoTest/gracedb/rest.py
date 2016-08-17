@@ -116,6 +116,9 @@ class FakeDb():
     def __logsPath__(self, graceid):
         return os.path.join(self.home, graceid, 'logs.pkl')
 
+    def __path2len__(self, path):
+        return len(self.extract(path))
+
     def __append__(self, stuff, path):
         '''append to pkl file'''
         ans = self.__extract__(path)
@@ -302,6 +305,7 @@ class FakeDb():
         else:
             shortFilename = ''
 
+        ind = self.path2len(self.__logsPath__(graceid))
         jsonD = {'comment': message,
                  'created': time.time(),
                  'self': self.__logsPath__(graceid),
@@ -309,14 +313,14 @@ class FakeDb():
                  'filename': shortFilename,
                  'tag_names': tagname,
                  'file': '',
-                 'N': 0,  
+                 'N': ind+1,  
                  'tags': '',
                  'issuer': {'username': username+'@LIGO.ORG',
                             'display_name': username,
                            },
                 }
 
-        ind = self.__append__( jsonD, self.__logsPath__(graceid))
+        ind = self.__append__( jsonD, self.__logsPath__(graceid)) ### should give the same number as self.path2len(self.__logsPath(graceid))+1
         if filename:
             self.__copyFile__(graceid, filename)
 
