@@ -11,20 +11,37 @@ import multiprocessing as mp
 from ligoMP.lvalert import interactiveQueue as iQ
 from ligoTest.lvalert import lvalertTestUtils as utils
 
+import time
+
 from ConfigParser import SafeConfigParser
 
 from optparse import OptionParser
 
 #-------------------------------------------------
 
+def fork( (foo, args) ):
+
+    conn1, conn2 = mp.Pipe()
+    args.insert( 0, conn2 ) ### connection must be the first argument!
+
+    proc = mp.Process(target=foo, args=args ) ### define the function based on the config file?
+    proc.start()
+    conn2.close() ### only the child should be able to communicate through conn2, so we close it here
+
+    return proc, conn1
+
 def alert2interactiveQueue( node, message, node2proc, verbose=False):
     '''
     pushes alert through multiprocessing connection to child process
     signature is specified within lvalertTestUtils
-
-    NOT IMPLEMENTED
     '''
-    raise NotImplementedError
+    proc, conn, mp_child_name = node2proc[node]
+    if not proc.is_alive():
+        for _, conn in node2proc.values():
+            conn.terminate()
+        raise RuntimeError("childProc=%s died!"%mp_child_name)
+
+    conn.send( (message, time.time()) )
 
 #-------------------------------------------------
 
@@ -56,7 +73,55 @@ config.read(configFilename)
 if opts.verbose:
     print "launching child processes"
 node2proc = dict()
-raise NotImplementedError
+for mp_child_name in config.sections():
+        childConfig = config.get(mp_child_name, "childConfig")
+
+        if cp.has_option(mp_child_name, "verbose"):
+            verbose = config.getboolean(mp_child_name, "verbose")
+        else:
+            verbose = False
+        if cp.has_option(mp_child_name, "sleep"):
+            sleep = config.getfloat(mp_child_name, "sleep")
+        else:
+            sleep = 0.1
+
+        ### parameters about garbage collection
+        if cp.has_option(mp_child_name, "maxComplete"):
+            maxComplete = config.getint(mp_child_name, "maxComplete")
+        else:
+            maxComplete = 100
+        if cp.has_option(mp_child_name, "maxFrac"):
+            maxFrac = config.getfloat(mp_child_name, "maxFrac")
+        else:
+            maxFrac = 0.5
+
+        ### parameters about warnings
+        if cp.has_option(mp_child_name, "warnThr"):
+            warnThr = config.getfloat(mp_child_name, "warnThr")
+        else:
+            warnThr = 1e3
+        if cp.has_option(mp_child_name, "recipients"):
+            recipients = config.get(mp_child_name, "recipients").split()
+        else:
+            recipients = []
+        if cp.has_option(mp_child_name, "warnDelay"):
+            warnDelay = config.getfloat(mp_child_name, "warnDelay")
+        else:
+            warnDelay = 3600
+        if cp.has_option(mp_child_name, "maxWarn"):
+            maxWarn = config.getint(mp_child_name, "maxWarn")
+        else:
+            maxWarn = 24
+
+        ### fork the process
+        proc, conn = fork( (iQ.interactiveQueue, [childConfig, verbose, sleep, maxComplete, maxFrac, warnThr, recipients, warnDelay, maxWarn]) )
+
+        ### fill in node2proc
+        for node in cp.get(mp_child_name, "nodes").split(): ### iterate over nodes and add them to this process
+            if node2proc.has_key(node):
+                raise ValueError("node=%s assigned to more than one child process!" % (node))
+            else:
+                node2proc[node] = (proc, conn, mp_child_name)
 
 #-------------------------------------------------
 

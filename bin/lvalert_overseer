@@ -14,12 +14,29 @@ from optparse import OptionParser
 
 #-------------------------------------------------
 
-def alert2server( node, message, verbose=False ):
+def alert2server( node, message, username, password, server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
     '''
     actually send the alert to the server
     signature is specified within lvalertTestUtils
     '''
-    raise NotImplementedError
+    ### set up tmpfile
+    tmpfile = 'lvalert_overseer-tmp.json'
+    file_obj = open(tmpfile, 'w')
+    file_obj.write( message )
+    file_obj.close()
+
+    ### set up command
+    cmd = ['lvalert_send', "-a", username, "-b", password, "-s", server, '-n', node, -p, tmpfile]
+    if resource:
+        cmd += ['-r', resource]
+    if max_attempts:
+        cmd += ['-m', max_attempts]
+
+    ### run command
+    sp.Popen( cmd ).wait()
+    
+    ### clean up tempfile
+    os.remove(tmpfile)
 
 #-------------------------------------------------
 
