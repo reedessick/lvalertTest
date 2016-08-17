@@ -5,6 +5,11 @@ author      = "reed.essick@ligo.org"
 
 import os
 
+import subprocess as sp
+import multiprocessing as mp
+
+import tempfile
+
 import time
 
 #-------------------------------------------------
@@ -21,6 +26,85 @@ def line2alert( line ):
     given a line from a file, does the inverse of alert2line
     '''
     return line.split("|")
+
+#-------------------------------------------------
+
+def forked_wait(cmd, file_obj):
+    """
+    used with the "--dont-wait" option to avoid zombie processes via a double fork
+    main process will wait for this function to finish (quick), send the "wait" signal
+    which removes this function from the process table, and then moves on.
+    the forked process that this function creates become orphaned, and will automatically
+    be removed from the process table upon completion.
+    """
+    sp.Popen(cmd, stdin=file_obj, stdout=sys.stdout, stderr=sys.stderr)
+
+#-------------------------------------------------
+
+def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False ):
+    '''
+    forks a process via subprocess
+    signature is specified within lvalertTestUtils
+    '''
+    if node2cmd.has_key(node):
+        if dont_wait:
+            file_obj = tempfile.SpooledTemporaryFile(mode="w+r", max_size=1000)
+            file_obj.write(message)
+            file_obj.readlines() ### bug fix for "alert_type"=="new" events
+                                 ### without this, the position in file_obj gets messed up
+                                 ### no idea why, but it might be related to long messages becoming multiple stanzas
+            file_obj.seek(0, 0)
+            p = multiprocessing.Process(target=forked_wait, args=(node2cmd[node], file_obj))
+            p.start()
+            p.join()
+            file_obj.close()
+
+        else:
+            print sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE ).communicate(message)[0] ### we don't capture the output because lvalert_listen does not
+
+def alert2server( node, message, username='username', password='password', server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
+    '''
+    actually send the alert to the server
+    signature is specified within lvalertTestUtils
+    '''
+    ### set up tmpfile
+    tmpfile = 'lvalert_overseer-tmp.json'
+    file_obj = open(tmpfile, 'w')
+    file_obj.write( message )
+    file_obj.close()
+
+    ### set up command
+    cmd = ['lvalert_send', "-a", username, "-b", password, "-s", server, '-n', node, '-p', tmpfile]
+    if resource:
+        cmd += ['-r', resource]
+    if max_attempts:
+        cmd += ['-m', "%d"%max_attempts]
+
+    ### run command
+    sp.Popen( cmd, stdout=sys.stdout, stderr=sys.stderr ).wait()
+
+    ### clean up tempfile
+    os.remove(tmpfile)
+
+def alert2interactiveQueue( node, message, node2proc={}, verbose=False):
+    '''
+    pushes alert through multiprocessing connection to child process
+    signature is specified within lvalertTestUtils
+    '''
+    if node2proc.has_key(node):
+        proc, conn, mp_child_name = node2proc[node]
+        if not proc.is_alive():
+            for proc, conn, mp_child_name in node2proc.values():
+                proc.terminate()
+            raise RuntimeError("childProc=%s died!"%mp_child_name)
+
+        conn.send( (message, time.time()) )
+
+        for proc, conn, mp_child_name in node2proc.values():
+            if not proc.is_alive():
+                for proc, conn, mp_child_name in node2proc.values():
+                    proc.terminate()
+                raise RuntimeError("childProc=%s died!"%mp_child_name)
 
 #-------------------------------------------------
 

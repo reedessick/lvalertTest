@@ -6,51 +6,12 @@ author      = "reed.essick@ligo.org"
 #-------------------------------------------------
 
 import os
-import sys
-import subprocess as sp
 
-import multiprocessing as mp
-import tempfile
-
-from ligoTest.lvalert import lvalertTestUtils as utils
+from ligoTest.lvalert import lvalertTestUtils as lvutils
 
 from ConfigParser import SafeConfigParser
 
 from optparse import OptionParser
-
-#-------------------------------------------------
-
-def forked_wait(cmd, file_obj):
-    """
-    used with the "--dont-wait" option to avoid zombie processes via a double fork
-    main process will wait for this function to finish (quick), send the "wait" signal
-    which removes this function from the process table, and then moves on.
-    the forked process that this function creates become orphaned, and will automatically
-    be removed from the process table upon completion.
-    """
-    sp.Popen(cmd, stdin=file_obj, stdout=sys.stdout, stderr=sys.stderr)
-
-
-def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False ):
-    '''
-    forks a process via subprocess
-    signature is specified within lvalertTestUtils
-    '''
-    if node2cmd.has_key(node):
-        if dont_wait:
-            file_obj = tempfile.SpooledTemporaryFile(mode="w+r", max_size=1000)
-            file_obj.write(message)
-            file_obj.readlines() ### bug fix for "alert_type"=="new" events
-                                 ### without this, the position in file_obj gets messed up
-                                 ### no idea why, but it might be related to long messages becoming multiple stanzas
-            file_obj.seek(0, 0)
-            p = multiprocessing.Process(target=forked_wait, args=(node2cmd[node], file_obj))
-            p.start()
-            p.join()
-            file_obj.close()
-
-        else:
-            print sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE ).communicate(message)[0] ### we don't capture the output because lvalert_listen does not
 
 #-------------------------------------------------
 
@@ -109,5 +70,5 @@ if opts.verbose:
     print "monitoring : %s"%(", ".join(trackThese))
     print "  cadence  : %.3f"%opts.cadence
 
-buf = utils.LVAlertBuffer( trackThese )
-buf.monitor( alert2listener, cadence=opts.cadence, node2cmd=node2cmd, verbose=opts.verbose, dont_wait=opts.dont_wait )
+buf = lvutils.LVAlertBuffer( trackThese )
+buf.monitor( lvutils.alert2listener, cadence=opts.cadence, node2cmd=node2cmd, verbose=opts.verbose, dont_wait=opts.dont_wait )

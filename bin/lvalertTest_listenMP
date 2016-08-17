@@ -9,7 +9,7 @@ import os
 import multiprocessing as mp
 
 from ligoMP.lvalert import interactiveQueue as iQ
-from ligoTest.lvalert import lvalertTestUtils as utils
+from ligoTest.lvalert import lvalertTestUtils as lvutils
 
 import time
 
@@ -29,27 +29,6 @@ def fork( (foo, args) ):
     conn2.close() ### only the child should be able to communicate through conn2, so we close it here
 
     return proc, conn1
-
-def alert2interactiveQueue( node, message, node2proc={}, verbose=False):
-    '''
-    pushes alert through multiprocessing connection to child process
-    signature is specified within lvalertTestUtils
-    '''
-    if node2proc.has_key(node):
-        proc, conn, mp_child_name = node2proc[node]
-        if not proc.is_alive():
-            for proc, conn, mp_child_name in node2proc.values():
-                proc.terminate()
-            raise RuntimeError("childProc=%s died!"%mp_child_name)
-
-        conn.send( (message, time.time()) )
-
-        for proc, conn, mp_child_name in node2proc.values():
-            if not proc.is_alive():
-                for proc, conn, mp_child_name in node2proc.values():
-                    proc.terminate()
-                raise RuntimeError("childProc=%s died!"%mp_child_name)
-
 
 #-------------------------------------------------
 
@@ -143,5 +122,5 @@ if opts.verbose:
     print "monitoring : %s"%(", ".join(trackThese))
     print "  cadence  : %.3f"%opts.cadence
 
-buf = utils.LVAlertBuffer( trackThese )
-buf.monitor( alert2interactiveQueue, cadence=opts.cadence, node2proc=node2proc, verbose=opts.verbose )
+buf = lvutils.LVAlertBuffer( trackThese )
+buf.monitor( lvutils.alert2interactiveQueue, cadence=opts.cadence, node2proc=node2proc, verbose=opts.verbose )
