@@ -21,6 +21,8 @@ from glue.ligolw import ligolw
 from glue.ligolw import table
 from glue.ligolw import lsctables
 
+from ligoTest.lvalert import lvalertTestUtils as lvutils
+
 #-------------------------------------------------
 
 class FakeTTPResponse():
@@ -66,10 +68,10 @@ class FakeDb():
 
     def sendlvalert(self, message, node ):
         '''
-        prints node : message pairs to self.lvalert
+        prints node|message pairs to self.lvalert
         '''
         file_obj = open(self.lvalert, 'a')
-        print >> file_obj, node, ":", message
+        print >> file_obj, lvutils.alert2line(node, message)
         file_obj.close()
 
     def __node__(self, graceid):
