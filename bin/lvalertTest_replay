@@ -1,0 +1,160 @@
+#!/usr/bin/python
+usage       = "lvalertTest_replay [--options]"
+description = "replay messages from a GraceID. Writes the corresponding lvalert messages to STDOUT at the rate they were originally received. To broadcast over lvalert, we should use lvalertTest_overseer, lvalertTest_listen, or lvalertTest_listenMP"
+author      = "reed.essick@ligo.org"
+
+#-------------------------------------------------
+
+import json
+
+import time
+from lal.gpstime import tconvert
+
+from ligoTest.lvalert import lvalertTestUtils as lvutils
+
+import schedule
+
+from optparse import OptionParser
+
+#-------------------------------------------------
+
+def printAlert( alert, node ):
+    print lvutils.alert2line( node, alert )
+
+def event2alert( event, node ):
+    sched = schedule.Schedule()
+
+    graceid = event['graceid']
+    alert = { "alert_type": "new",
+              "description": "",
+              "file": 'N/A', ### doesn't look like I can look this up from event...
+              "object": event,
+              "uid": graceid,
+            }
+    sched.insert( schedule.Action( 0, printAlert, json.dumps(alert), node ) )
+
+    return sched
+
+def log2alert( event, log, node ):
+    sched = schedule.Schedule()
+
+    graceid       = event['graceid']
+    message       = log['comment']
+    shortFilename = log['filename']
+    fileversion   = log['file_version']
+    ind           = log['N']
+    created       = log['created']
+    username      = log['issuer']['display_name']
+    tagname       = log['tag_names']
+
+    if isinstance(log['created'], (float,int)):
+        logCreated = log['created']
+    else:
+        logCreated = tconvert( log['created'].split("+")[0], form='%Y-%M-%DT%h:%m%s' )
+
+    if isinstance(event['created'], (float,int)):
+        evtCreated = event['created']
+    else:
+        evtCreated = tconvert( event['created'].strip(" UTC"), form='%Y-%M-%DT%h:%m%s' )
+
+    dt = logCreated - evtCreated
+
+    if 'applying label' in message: ### send a label lvalert, not an update
+        label = message.split(':')[-1].strip()
+        alert = { 'uid':graceid,
+                  'alert_type':'label',
+                  'description':label,
+                  'file':'',
+                }
+        sched.insert( schedule.Action( dt, printAlert, json.dumps(alert), node ) )
+
+    alert = { 'uid':graceid,
+              "alert_type": "update",
+              "description": message,
+              "file": shortFilename,
+              "object": {
+                         "N": ind,
+                         "comment": message,
+                         "created": created,
+                         "file": shortFilename,
+                         "file_version": fileversion,
+                         "filename": shortFilename,
+                         "issuer": {
+                                    "display_name": username,
+                                    "username": username+"@ligo.org"
+                                    },
+                         "self": "",
+                         "tag_names": tagname,
+                         "tags": "",
+                        },
+            }
+    sched.insert( schedule.Action( dt, printAlert, json.dumps(alert), node ) )
+
+    return sched
+
+#-------------------------------------------------
+
+parser = OptionParser(usage=usage, description=description)
+
+parser.add_option('-v', '--verbose', default=False, action='store_true')
+
+parser.add_option('-n', '--node', default=False, type='string', help='if supplied, we send alerts to this node. Otherwise, we generate the node name from querying the database')
+
+parser.add_option('-g', '--graceid', default=None, type='string')
+
+parser.add_option('-G', '--gracedb-url', default='https://gracedb.ligo.org/api', type='string')
+
+opts, args = parser.parse_args()
+
+if not opts.graceid:
+    opts.graceid = raw_input('--graceid=')
+
+#-------------------------------------------------
+
+if opts.verbose:
+    print "looking for graceid=%s in gracedb->%s"%(opts.graceid, opts.gracedb_url)
+
+gdb = schedule.initGraceDb(opts.gracedb_url)
+
+### figure out things about this event
+if opts.verbose:
+    print "querying info about this event"
+event = gdb.event( opts.graceid ).json()
+logs = gdb.logs( opts.graceid ).json()
+
+### figure out node name
+if not opts.node:
+    if event.has_key('search'):
+        opts.node = "%s_%s_%s"%(event['group'], event['pipeline'], event['search'])
+    else:
+        opts.node = "%s_%s"%(event['group'], event['pipeline'])
+    opts.node = opts.node.lower()
+
+if opts.verbose:
+    print "sending messages to node=%s"%opts.node
+
+### build agenda
+if opts.verbose:
+    print "building agenda"
+agenda = schedule.Schedule()
+
+### build initial alert
+if opts.verbose:
+    print "    event creation"
+agenda += event2alert(event, opts.node) 
+
+### build update and label alerts
+if opts.verbose:
+    print "    logs and labels"
+for log in logs['log']: ### retrieve log and iterate to build agenda
+    agenda += log2alert(event, log, opts.node) 
+
+### set expiration for the agenda
+agenda.setExpiration( time.time()+3 ) ### set the agenda for 3 seconds in the future
+
+### carry out the agenda
+if opts.verbose:
+    print "replaying lvalert messages"
+for action in agenda:
+    action.wait() ### wait until we're ready to do this
+    action.execute() ### do it
