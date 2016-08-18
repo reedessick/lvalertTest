@@ -67,7 +67,6 @@ LVAlertTest (~/lib/ligoTest/lvalert/lvalertTestUtils.py) provides basic wrappers
 Here is an example command line that simulates 5 cWB events, submitting them to FakeDb, and listening to them with lvalertTest_listen. All the required files for this example live in the repository, although you may have to modify some config files to point to the correct executables (depending on where you clone the repo)
 
 >  git clone https://github.com/reedessick/lvalertTest.git
-
 >  cd lvalertTest
 
 >  . setup.sh
