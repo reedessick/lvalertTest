@@ -66,19 +66,19 @@ LVAlertTest (~/lib/ligoTest/lvalert/lvalertTestUtils.py) provides basic wrappers
 
 Here is an example command line that simulates 5 cWB events, submitting them to FakeDb, and listening to them with lvalertTest_listen. All the required files for this example live in the repository, although you may have to modify some config files to point to the correct executables (depending on where you clone the repo)
 
->>  git clone https://github.com/reedessick/lvalertTest.git
+>  git clone https://github.com/reedessick/lvalertTest.git
 
->>  cd lvalertTest
+>  cd lvalertTest
 
->>  . setup.sh
+>  . setup.sh
 
->>  mkdir -p test/FakeDb
+>  mkdir -p test/FakeDb
 
->>  touch test/FakeDb/lvalert.out
+>  touch test/FakeDb/lvalert.out
 
->>  bin/lvalertTest_listen -f test/FakeDb -c etc/lvalert_listen.ini 1> test/lvalertTest_listen.out 2> test/lvalertTest_listen.err &
+>  bin/lvalertTest_listen -f test/FakeDb -c etc/lvalert_listen.ini 1> test/lvalertTest_listen.out 2> test/lvalertTest_listen.err &
 
->>  bin/simulate.py -g test/FakeDb -N 5 -i H1,L1 -o test/ etc/cwb.ini
+>  bin/simulate.py -g test/FakeDb -N 5 -i H1,L1 -o test/ etc/cwb.ini
 
 Note: we touch test/FakeDb/lvalert.out because lvalertTest_listen expects it to exist. We then launch lvalertTest_listen in the background. At this point, we run simulation.py to generate the 5 cWB events distributed uniformly through time at a rate of 0.1 Hz. simulate.py provides several command-line options to adjust these parameters, including changing the distribution from uniform to poisson and specifying durations of the experiment rather than a fixed number of events.
 
