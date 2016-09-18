@@ -117,6 +117,8 @@ class LVAlertBuffer():
     def __init__(self, filenames):
         if isinstance(filenames, str):
             filenames = [filenames]
+        if not filenames:
+            raise ValueError("must specify at least one file to monitor!")
         self.fileMonitors = [FileMonitor(filename) for filename in filenames]
 
     def monitor(self, foo, cadence=0.1, **kwargs):
