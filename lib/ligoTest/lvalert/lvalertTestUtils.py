@@ -44,7 +44,7 @@ def forked_wait(cmd, file_obj):
 def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False ):
     '''
     forks a process via subprocess
-    signature is specified within lvalertTestUtils
+    used within lvalertTest_listen
     '''
     if node2cmd.has_key(node):
         if dont_wait:
@@ -62,10 +62,10 @@ def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False )
         else:
             print sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE ).communicate(message)[0] ### we don't capture the output because lvalert_listen does not
 
-def alert2server( node, message, username='username', password='password', server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
+def alert2server( node, message, username='username', netrc=None, server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
     '''
     actually send the alert to the server
-    signature is specified within lvalertTestUtils
+    used within lvalertTest_overseer
     '''
     ### set up tmpfile
     tmpfile = 'lvalert_overseer-tmp.json'
@@ -74,7 +74,9 @@ def alert2server( node, message, username='username', password='password', serve
     file_obj.close()
 
     ### set up command
-    cmd = ['lvalert_send', "-a", username, "-b", password, "-s", server, '-n', node, '-p', tmpfile]
+    cmd = ['lvalert_send', "-a", username, "-s", server, '-n', node, '-p', tmpfile]
+    if netrc:
+        cmd += ['-N', netrc]
     if resource:
         cmd += ['-r', resource]
     if max_attempts:
@@ -89,7 +91,7 @@ def alert2server( node, message, username='username', password='password', serve
 def alert2interactiveQueue( node, message, node2proc={}, verbose=False):
     '''
     pushes alert through multiprocessing connection to child process
-    signature is specified within lvalertTestUtils
+    used within lvalertTest_listenMP
     '''
     if node2proc.has_key(node):
         proc, conn, mp_child_name = node2proc[node]

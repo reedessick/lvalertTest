@@ -74,4 +74,9 @@ if opts.verbose:
     print "  cadence  : %.3f"%opts.cadence
 
 buf = lvutils.LVAlertBuffer( trackThese )
-buf.monitor( lvutils.alert2listener, cadence=opts.cadence, node2cmd=node2cmd, verbose=opts.verbose, dont_wait=opts.dont_wait )
+buf.monitor( lvutils.alert2listener, 
+             cadence   = opts.cadence, 
+             node2cmd  = node2cmd, 
+             verbose   = opts.verbose, 
+             dont_wait = opts.dont_wait, 
+           )

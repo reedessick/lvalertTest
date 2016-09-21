@@ -21,9 +21,10 @@ parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the di
 parser.add_option('-C', '--command-filename', default=[], action='append', type='string', help='the file into which lvalert commands must be written')
 
 parser.add_option('-a', '--username', default='username', type='string')
-parser.add_option('-b', '--password', default='password', type='string')
 parser.add_option('-s', "--server",   default="lvalert.cgca.uwm.edu", help="the pubsub server")
 parser.add_option('-r', "--resource", default="sender", help="resource to use in JID")
+parser.add_option('-N', "--netrc", default=None, type='string', help='extract username and password from this file. Passed to lvalert_send if supplied')
+
 parser.add_option('-m', "--max_attempts", default=10, help="max number of timeouts allowed")
 
 parser.add_option('--cadence', default=0.1, type='float', help='how often we check lvalert.out for new messages')
@@ -49,11 +50,11 @@ if opts.verbose:
 
 buf = lvutils.LVAlertBuffer( trackThese )
 buf.monitor( lvutils.alert2server, 
-             cadence=opts.cadence, 
-             username=opts.username, 
-             password=opts.password, 
-             server=opts.server, 
-             resource=opts.resource, 
-             max_attempts=opts.max_attempts, 
-             verbose=opts.verbose 
+             cadence      = opts.cadence, 
+             username     = opts.username, 
+             netrc        = opts.netrc, 
+             server       = opts.server, 
+             resource     = opts.resource, 
+             max_attempts = opts.max_attempts, 
+             verbose      = opts.verbose,
            )
