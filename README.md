@@ -1,5 +1,11 @@
 # lvalertTest
 
+Read the official documentation here:
+
+  - http://lvalerttest.readthedocs.io/en/latest/
+
+--------------------------------------------------
+
 # To Do
 
  - need to mirror logger functionality that is within lvalert_listenMP into lvalertTest_listenMP
