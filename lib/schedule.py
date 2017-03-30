@@ -19,7 +19,7 @@ def initGraceDb(url):
     currently, that's done by requring 'http' to be the begining of the url for real GraceDb instances. 
     Otherwise we try to set up FakeDb, in which case we expect url to be a path.
     '''
-    if 'http' == url[:4]:
+    if 'http' == url[:4]: ### could be fragile...
         return GraceDb(url)
     else:
         return FakeDb(url) ### expects url to be a path
