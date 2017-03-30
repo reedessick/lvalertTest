@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# We assume you have correctly set up your environment, including lvalertMP and lvalertTest.
+# This example writes an lvalert message via lvalertTest_commandMP. It also shows how one can
+# listen to a particular file with lvalerTest_listen and trigger follow-up accordingly.
+# We trigger a very simple executable, but this should demonstrate the concept.
+
+#------------------------
+# define common variables
+
+command_filename=${PWD}/commands.out
+
+command=printMessage
+command_kwargs="message,hello"
+
+executable=${PWD}/echo_stdin
+output=${PWD}/lvalertTest_listen.out
+
+config=${PWD}/lvalertTest_listen.ini
+node=testNode
+
+listener_out=${PWD}/listener.out
+listener_err=${PWD}/listener.err
+
+#-------------------------
+# set up listener
+
+### write executable
+echo "writing : $executable"
+
+echo "#!/bin/bash" > $executable
+echo "read a" >> $executable
+echo "echo listener received: \$a > $output" >> $executable
+
+chmod +x $executable
+
+### write config file
+echo "writing : $config"
+
+echo "[${node}]" > $config
+echo "executable = $executable" >> $config
+
+### touch command_filename so it exists
+touch $command_filename
+
+### stand up listener
+echo "launching listener"
+
+lvalertTest_listen -C $command_filename -c $config 1> $listener_out 2> $listener_err & ### we now have a listener "subscribed" to $node and listening to $command_filename
+
+#------------------------
+# send command
+
+### write a command to ${filename}
+echo "sending $command $command_kwargs"
+
+lvalertTest_commandMP -n $node -f $command_filename $command $command_kwargs
+
+#------------------------
+# show what listener heard
+
+echo "contents of $output are as follows"
+
+cat $output
+
+#------------------------
+# clean up listener
+
+kill $(ps -fu $(whoami) | grep $config | grep $command_filename | awk '{print $2}')

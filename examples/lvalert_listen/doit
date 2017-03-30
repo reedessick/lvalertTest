@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# We assume you have correctly set up your environment, including lvalertMP and lvalertTest.
+# This example writes an lvalert message via lvalertTest_commandMP. It also shows how one can
+# distribute messages from a particular file through remote LVAlert servers via 
+# lvalertTest_overseer. We also listen to these alerts and trigger follow up accordingly.
+# We trigger a very simple executable, but this should demonstrate the concept.
+
+#------------------------
+# define common variables
+
+command_filename=${PWD}/commands.out
+
+command=printMessage
+command_kwargs="message,hello"
+
+executable=${PWD}/echo_stdin
+output=${PWD}/lvalert_listen.out
+
+config=${PWD}/lvalert_listen.ini
+node=idq-test ### NOTE: you need to make sure this is something you own, so change this accordingly
+
+listener_out=${PWD}/listener.out
+listener_err=${PWD}/listener.err
+
+overseer_out=${PWD}/overseer.out
+overseer_err=${PWD}/overseer.err
+
+listener_resource=examples-listener
+overseer_resource=examples-overseer
+
+#-------------------------
+# set up listener
+
+### write executable
+echo "writing : $executable"
+
+echo "#!/bin/bash" > $executable
+echo "read a" >> $executable
+echo "echo listener received: \$a > $output" >> $executable
+
+chmod +x $executable
+
+### write config file
+echo "writing : $config"
+
+echo "[${node}]" > $config
+echo "executable = $executable" >> $config
+
+### touch command_filename so it exists
+touch $command_filename
+
+### stand up listener
+echo "launching listener"
+
+lvalert_listen -c $config -r $listener_resource 1> $listener_out 2> $listener_err & ### we now have a listener "subscribed" to $node
+
+echo "sleeping 10 seconds to allow lvalert_listen to connect"
+sleep 10 ### give this time to connect properly
+
+#------------------------
+# set up overseer
+
+lvalertTest_overseer -C $command_filename -r $overseer_resource 1> $overseer_out 2> $overseer_err & ### we now have an overseer which will publish our commands
+
+#------------------------
+# send command
+
+### write a command to ${filename}
+echo "sending $command $command_kwargs"
+
+lvalertTest_commandMP -n $node -f $command_filename $command $command_kwargs
+
+echo "sleeping 10 seconds to allow message to pass through LVAlert server and trigger follow-up"
+sleep 10 ### give everything time to tick through
+
+#------------------------
+# show what listener heard
+
+echo "contents of $output are as follows"
+
+cat $output
+
+#------------------------
+# clean up listener
+#kill $(ps -fu $(whoami) | grep $config | grep $listener_resource | awk '{print $2}')
+
+# clean up overseer
+#kill $(ps -fu $(whoami) | grep $command_filename | grep $overseer_resource | awk '{print $2}')
