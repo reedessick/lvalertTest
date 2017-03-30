@@ -367,8 +367,8 @@ class PlotSkymaps():
         return "Mollweide projection of %s"%fits
 
     def genPNG(self, fits):
-        pngName = fits.split('.')[0]+".png"
-        open(pngName,"w").close() ### touch it so it exists
+        pngName = os.path.join( os.path.dirname(fits), os.path.basename(fits).split('.')[0]+".png" )
+        open(pngName, "w").close() ### touch it so it exists
         return pngName
 
     def genSchedule(self, fits, tagname=['sky_loc']):
