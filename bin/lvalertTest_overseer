@@ -17,10 +17,10 @@ parser = OptionParser(usage=usage, description=description)
 
 parser.add_option('-v', '--verbose', default=False, action='store_true')
 
-parser.add_option('-f', '--fakeDB-dir', default='.', type='string', help='the directory which FakeDb is managing')
+parser.add_option('-f', '--fakeDB-dir', default=None, type='string', help='the directory which FakeDb is managing')
 parser.add_option('-C', '--command-filename', default=[], action='append', type='string', help='the file into which lvalert commands must be written')
 
-parser.add_option('-a', '--username', default='username', type='string')
+parser.add_option('-a', '--username', default=None, type='string')
 parser.add_option('-s', "--server",   default="lvalert.cgca.uwm.edu", help="the pubsub server")
 parser.add_option('-r', "--resource", default="sender", help="resource to use in JID")
 parser.add_option('-N', "--netrc", default=None, type='string', help='extract username and password from this file. Passed to lvalert_send if supplied')
@@ -31,10 +31,13 @@ parser.add_option('--cadence', default=0.1, type='float', help='how often we che
 
 opts, args = parser.parse_args()
 
-lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
-if not os.path.exists(lvalertSrc):
-    raise ValueError('could not find lvalert.out file corresponding to --fakeDB-dir : %s'%lvalertSrc)
-trackThese = [lvalertSrc]
+trackThese = []
+
+if opts.fakeDB_dir:
+    lvalertSrc = os.path.join(opts.fakeDB_dir, 'lvalert.out')
+    if not os.path.exists(lvalertSrc):
+        raise ValueError('could not find lvalert.out file corresponding to --fakeDB-dir : %s'%lvalertSrc)
+    trackThese.append(lvalertSrc)
 
 if opts.command_filename:
     for filename in opts.command_filename:
