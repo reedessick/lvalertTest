@@ -82,8 +82,5 @@ echo "contents of $output are as follows"
 cat $output
 
 #------------------------
-# clean up listener
-#kill $(ps -fu $(whoami) | grep $config | grep $listener_resource | awk '{print $2}')
-
-# clean up overseer
-#kill $(ps -fu $(whoami) | grep $command_filename | grep $overseer_resource | awk '{print $2}')
+# clean up listener and overseer
+kill $(ps -fu $(whoami) | grep $config | grep $listener_resource | awk '{print $2}') $(ps -fu $(whoami) | grep $command_filename | grep $overseer_resource | awk '{print $2}')
