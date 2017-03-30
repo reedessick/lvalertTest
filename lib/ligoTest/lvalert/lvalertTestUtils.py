@@ -4,6 +4,7 @@ author      = "reed.essick@ligo.org"
 #-------------------------------------------------
 
 import os
+import sys
 
 import subprocess as sp
 import multiprocessing as mp
@@ -62,7 +63,7 @@ def alert2listener( node, message, node2cmd={}, verbose=False, dont_wait=False )
         else:
             print sp.Popen( node2cmd[node], stdin=sp.PIPE, stdout=sp.PIPE ).communicate(message)[0] ### we don't capture the output because lvalert_listen does not
 
-def alert2server( node, message, username='username', netrc=None, server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
+def alert2server( node, message, username=None, netrc=None, server='lvalert.cgca.uwm.edu', resource=None, max_attempts=None, verbose=False ):
     '''
     actually send the alert to the server
     used within lvalertTest_overseer
@@ -74,7 +75,9 @@ def alert2server( node, message, username='username', netrc=None, server='lvaler
     file_obj.close()
 
     ### set up command
-    cmd = ['lvalert_send', "-a", username, "-s", server, '-n', node, '-p', tmpfile]
+    cmd = ['lvalert_send', "-s", server, '-n', node, '-p', tmpfile]
+    if username:
+        cmd += ['-a', username]
     if netrc:
         cmd += ['-N', netrc]
     if resource:
