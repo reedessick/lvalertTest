@@ -223,7 +223,6 @@ class FakeDb():
         jsonD = {'graceid':graceid,
                  'group'  :group,
                  'pipeline':pipeline,
-                 'search':search,
                  'created':time.time(),
                  'submitter':getpass.getuser()+'@ligo.org',
                  'links': {'neighbors':'',
@@ -236,6 +235,8 @@ class FakeDb():
                            'emobservations':'',
                           },
                 }
+        if search!=None:
+            jsonD['search'] = search
 
         ### extract these by parsing filename!
         jsonD.update( self.__file2extraattributes__(pipeline, filename) )
