@@ -165,25 +165,60 @@ class OmicronLIB(Pipeline):
 
         return firstFile, [(dt, message, otherFile1), (dt, message, otherFile2), ...]
         '''
-        d = {0:{'gpstime'       : self.gps,
-                'FAR'           : self.far,
-                'raw FAR'       : self.far,
-                'trials factor' : 1,
-                'nevents'       : 1, 
-                'likelihood'    : None,
-                'BCI'           : self.drawBCI(),
-                'BSN'           : self.drawBSN(),
-                'instruments'   : ','.join(self.instruments),
-                'timeslides'    : dict( (key,'0.0') for key in self.instruments ),
-                'Omicron SNR'   : self.drawSNRs(),
-                'hrss'          : self.drawHrss(),
-                'frequency'     : self.drawFrequency(),
-                'quality'       : self.drawQuality(), 
-               },
+        ### old oLIB format (pre-O2)
+#        d = {'gpstime'       : self.gps,
+#             'FAR'           : self.far,
+#             'raw FAR'       : self.far,
+#             'trials factor' : 1,
+#             'nevents'       : 1, 
+#             'likelihood'    : None,
+#             'BCI'           : self.drawBCI(),
+#             'BSN'           : self.drawBSN(),
+#             'instruments'   : ','.join(self.instruments),
+#             'timeslides'    : dict( (key,'0.0') for key in self.instruments ),
+#             'Omicron SNR'   : self.drawSNRs(),
+#             'hrss'          : self.drawHrss(),
+#             'frequency'     : self.drawFrequency(),
+#             'quality'       : self.drawQuality(), 
+#            }
+
+        bsn = self.drawBSN()
+        hrss = self.drawHrss()
+        freq = self.drawFrequency()
+        qual = self.drawQuality()
+        if freq > 1000:
+            search_bin = "high_f"
+        elif qual > 3:
+            search_bin = "high_Q"
+        else:
+            search_bin = "low_Q"
+
+        d = {'gpstime'       : self.gps,
+             'FAR'           : self.far,
+             'raw FAR'       : self.far,
+             'trials_factor' : 1,
+             'nevents'       : 1,
+             'likelihood'    : None,
+             'search_bin'    : search_bin,
+             'BCI'           : self.drawBCI(),
+             'BSN'           : bsn,
+             'logBSN'        : np.log10(bsn),
+             'instruments'   : ','.join(self.instruments),
+             'frequency_posterior_median' : freq,
+             'frequency_posterior_mean' : freq,
+             'quality_posterior_median' : qual,
+             'quality_posterior_mean' : qual,
+             'hrss_posterior_median' : hrss,
+             'hrss_posterior_mean' : hrss,
             }
+        snrs = self.drawSNRs()
+        d['Omicron_SNR_Network'] = snrs['Network']
+        for instrument in self.instruments:
+            d['timeslides_%s'%instrument] = "0.0"
+            d['Omicron_SNR_%s'%instrument] = snrs[instrument]
+        
         filename = self.genFilename(directory=directory)
         file_obj = open(filename, 'w')
-#        file_obj.write( json.dumps(d) )
         json.dump( d, file_obj )
         file_obj.close()
 

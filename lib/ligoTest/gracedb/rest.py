@@ -284,23 +284,47 @@ class FakeDb():
 
         elif pipeline == 'lib':
             file_obj = open(filename, 'r')
-            a = json.loads( file_obj.read() )["0"]
+            a = json.loads( file_obj.read() )
             file_obj.close()
+
+            ### old oLIB format (pre-O2)
+#            ans = {'gpstime'    : a['gpstime'],
+#                   'FAR'        : a['FAR'],
+#                   'instruments': a['instruments'],
+#                   'likelihood' : a['likelihood'],
+#                   'nevents'    : a['nevents'],
+#                   'extra_attributes' : {'raw FAR'    : a['raw FAR'],
+#                                         'BCI'        : a['BCI'], 
+#                                         'BSN'        : a['BSN'],
+#                                         'Omicron SNR': a['Omicron SNR'],
+#                                         'timeslides' : a['timeslides'], 
+#                                         'hrss'       : a['hrss'],
+#                                         'frequency'  : a['frequency'],
+#                                         'quality'    : a['quality'],
+#                                        },
+#                  }
 
             ans = {'gpstime'    : a['gpstime'],
                    'FAR'        : a['FAR'],
                    'instruments': a['instruments'],
                    'likelihood' : a['likelihood'],
                    'nevents'    : a['nevents'],
-                   'extra_attributes' : {'raw FAR'    : a['raw FAR'],
-                                         'BCI'        : a['BCI'], 
-                                         'BSN'        : a['BSN'],
-                                         'Omicron SNR': a['Omicron SNR'],
-                                         'timeslides' : a['timeslides'], 
-                                         'hrss'       : a['hrss'],
-                                         'frequency'  : a['frequency'],
-                                         'quality'    : a['quality'],
-                                        },
+                   'extra_attributes' :
+                       { "LalInferenceBurst": 
+                           {"omicron_snr_network" : a['Omicron_SNR_Network'], 
+                            "omicron_snr_H1"      : a['Omicron_SNR_H1'] if 'H1' in a['instruments'] else None, 
+                            "omicron_snr_L1"      : a['Omicron_SNR_L1'] if 'L1' in a['instruments'] else None, 
+                            "omicron_snr_V1"      : a['Omicron_SNR_V1'] if 'V1' in a['instruments'] else None,
+                            "bsn"                 : a['BSN'], 
+                            "bci"                 : a['BCI'], 
+                            "quality_median"      : a['quality_posterior_median'], 
+                            "quality_mean"        : a['quality_posterior_mean'], 
+                            "frequency_median"    : a['frequency_posterior_median'], 
+                            "frequency_mean"      : a['frequency_posterior_mean'],
+                            "hrss_mean"           : a['hrss_posterior_median'], 
+                            "hrss_median"         : a['hrss_posterior_mean'], 
+                           },
+                      }, 
                   }
 
             return ans
