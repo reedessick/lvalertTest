@@ -100,7 +100,7 @@ class FakeDb():
 
     def sendlvalert(self, message, node ):
         file_obj = open(self.lvalert, 'a')
-        print >> file_obj, lvutils.alert2line(node, message)
+        print >> file_obj, lvutils.alert2line(node, json.dumps(message))
         file_obj.close()
 
     def __node__(self, graceid):
