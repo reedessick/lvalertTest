@@ -220,17 +220,19 @@ class FakeDb():
     ### insertion ###
 
     def __createEvent__(self, graceid, group, pipeline, filename, search=None):
+        labelsPath = self.__labelsPath__(graceid)
         jsonD = {'graceid':graceid,
                  'group'  :group,
                  'pipeline':pipeline,
                  'created':time.time(),
                  'submitter':getpass.getuser()+'@ligo.org',
+                 'labels' : dict((label, labelsPath) for label in self.__extract__(self.__labelsPath__(graceid))), ### NOTE: this is overkill for now, but we may want to support labeling during event creation, at which point we will want to perform this query.
                  'links': {'neighbors':'',
                            'files':self.__filesPath__(graceid),
                            'log':self.__logsPath__(graceid),
                            'tags':'',
                            'self':self.__directory__(graceid),
-                           'labels':self.__labelsPath__(graceid),
+                           'labels':labelsPath,
                            'filemeta':self.__topLevelPath__(graceid),
                            'emobservations':'',
                           },
@@ -281,8 +283,6 @@ class FakeDb():
                     
                     readme = "significance based on " in line ### next line is a FAR statement
                         
-            return ans
-
         elif pipeline == 'lib':
             file_obj = open(filename, 'r')
             a = json.loads( file_obj.read() )
@@ -328,8 +328,6 @@ class FakeDb():
                       }, 
                   }
 
-            return ans
-
         elif pipeline in ['gstlal', 'gstlal-spiir', 'mbtaonline', 'pycbc']:
             xmldoc = ligolw_utils.load_filename(filename, contenthandler=lsctables.use_in(ligolw.LIGOLWContentHandler))
 
@@ -345,11 +343,10 @@ class FakeDb():
                                            },
                       }
 
-            return ans
-
         else:
             raise ValueError('pipeline=%s not understood'%pipeline)
 
+        return ans
 
     def createEvent(self, group, pipeline, filename, search=None, filecontents=None, **kwargs):
         self.check_group_pipeline_search( group, pipeline, search )
