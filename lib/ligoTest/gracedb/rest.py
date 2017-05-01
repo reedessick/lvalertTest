@@ -131,7 +131,32 @@ class FakeDb():
         if not os.path.exists(self.__directory__(graceid)):
             raise FakeTTPError('could not find graceid=%s'%graceid)
 
+
+
     ### generic utils and data management ###
+
+    def __is_label__(self, label):
+        return label in self.__allowedLabels__
+
+    def __is_graceid__(self, graceid):
+        if (graceid[0] in self.__group2letter__.values()): ### ensure it starts with the correct letter
+            try:
+                num = int(graceid[1:]) ### ensure we can convert this to an integer
+                return True
+
+            except ValueError as e:
+                return False
+
+        else:
+            return False
+
+    def __get_all_graceids__(self):
+        graceids = []
+        for path in os.listdir(self.home):
+            path = os.path.basename(path)
+            if self.__is_graceid__(path):
+                graceids.append( path )
+        return graceids
 
     def __genGraceID__(self, group):
         '''
@@ -139,7 +164,7 @@ class FakeDb():
         returns the biggest one +1
         if none exist, starts at 000000
         '''
-        existing = [int(os.path.basename(_.strip('/'))[1:]) for _ in glob.glob("%s/*/"%self.home)]
+        existing = [int(graceid[1:]) for graceid in self.__get_all_graceids__()]
         if existing:
             ind = max(existing)+1
         else:
@@ -467,7 +492,92 @@ class FakeDb():
     ### queries ###
 
     def events(self, query=None, orderby=None, count=None, columns=None):
-        raise NotImplementedError('not sure how to support query logic easily...')
+        """
+        WARNING: we only support limitted syntax for these queries at this time. Specifically, we support three types of clauses that can be supplied in any order
+            graceid's
+            labels
+            gpsstart .. gpsstop
+
+        eg: "ADVNO 1177672330 .. 1177672360"
+
+        NOTE: we only support query!=None at this time (we require orderby=count=columns=None but keep these kwargs present for consistency with ligo.gracedb.rest.GraceDb)
+
+        more complete syntatic coverage may be available via sqlparse (https://sqlparse.readthedocs.io/en/latest/)
+        """
+        assert (orderby==None) and (count==None) and (columns==None), 'FakeDb.events only supports orderby=None, count=None, columns=None at this time!'
+
+        if query: ### downselect events
+            labels = []
+            graceids = []
+            gpstimes = []
+            bits = query.split()
+            N = len(bits)
+            i = 0
+            while i < N:
+                bit = bits[i]
+                try: ### interpret as the first part of a "gps .. gps" clause
+                    gpsstart = float(bit)
+                    if (i<N-2) and (bits[i+1]=='..'):
+                        gpsstop = float(bits[i+2])
+                    else:
+                        raise FakeTTPError('Invalid query: could not parse "gps .. gps" clause')
+                    gpstimes.append( (gpsstart, gpsstop) )
+                    i += 3
+
+                except ValueError as e: ### check to see if this is a label or a GraceId
+                    if self.__is_label__(bit): ### this is a known label
+                        labels.append( bit )
+
+                    elif self.__is_graceid__(bit): ### is a graceid
+                        graceids.append(bit)
+
+                    else:
+                        raise FakeTTPError('Invalid query: query contained an invalid label or graceid')
+                    i += 1
+
+            if graceids: ### check if users sepecified graceids
+                if len(graceids)==1:
+                    try:
+                        self.check_graceid(graceids[0])
+                        events = graceids
+                    except FakeTTPError as e: ### could not find this event
+                        events = [] 
+                else:
+                    events = [] ### more than one graceid, must return an empty list
+            else:
+                events = self.__get_all_graceids__() ### just grab all events
+                                                     ### FIXME: downselecting based on this may not scale well
+
+            if labels: ### check if users specified labels
+                retained = []
+                for label in labels:
+                    for graceid in events:
+                        these_labels = [d['name'] for d in self.labels(graceid).json()['labels']]
+                        if label in these_labels:
+                            retained.append( graceid )
+                events = retained
+
+            if gpstimes: ### check if users specified gpstimes
+                retained = []
+                for gpsstart, gpsstop in gpstimes:
+                    for graceid in events:
+                        gpstime = self.__extract__(self.__topLevelPath__(graceid))['gpstime']
+                        if (gpsstart<=gpstime) and (gpstime<=gpsstop):
+                            retained.append( graceid )
+                events = retained
+                
+        else: ### return all events
+            events = self.__get_all_graceids__()
+
+        ### FIXME: we should modify events to account for orderby, count here
+
+        for graceid in events:
+            topLevel = self.event(graceid).json()
+
+            ### FIXME: incorporate columns here
+
+            yield topLevel
+
 
     def event(self, graceid):
         self.check_graceid(graceid)
