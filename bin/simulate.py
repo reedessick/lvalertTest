@@ -30,6 +30,8 @@ parser = OptionParser( usage=usage, description=description )
 parser.add_option("-v", "--verbose", default=False, action="store_true")
 parser.add_option("-V", "--Verbose", default=False, action="store_true")
 
+parser.add_option('', '--start-gps', default=None, type='float')
+
 ### testing options
 parser.add_option("-s", "--unsafe-uploads", default=False, action="store_true", help="allow event creation with group!=Test")
 parser.add_option("-T", "--test", default=False, action="store_true", help="do not actually perform actions, but only print what they are")
@@ -141,7 +143,12 @@ if opts.verbose:
 sched = schedule.Schedule()
 delay = 0.0
 t0 = time.time()
-start_gps = float(tconvert('now'))
+
+if opts.start_gps!=None:
+    start_gps = opts.start_gps
+else:
+    start_gps = float(tconvert('now'))
+
 for ind, wait in enumerate(waits):
     if opts.verbose:
         print "generating schedule for event %d"%(ind)
