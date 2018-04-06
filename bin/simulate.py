@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 usage       = "simulate.py [--options] config.ini config.ini config.ini ..."
 description = "a script to submit fake triggers to an instance of GraceDB as well as simulated follow-up processes. Generates events according to either a uniform rate or a Poisson process."
 author      = "reed.essick@ligo.org"
